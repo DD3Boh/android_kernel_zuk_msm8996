@@ -97,6 +97,8 @@ static DOZE_T doze_status = DOZE_DISABLED;
 static s8 gtp_enter_doze(struct goodix_ts_data *ts);
 #endif
 
+bool init_done;
+
 #ifdef GTP_CONFIG_OF
 int gtp_parse_dt_cfg(struct device *dev, u8 *cfg, int *cfg_len, u8 sid);
 #endif
@@ -115,44 +117,38 @@ Output:
 *********************************************************/
 s32 gtp_i2c_read(struct i2c_client *client, u8 *buf, s32 len)
 {
-	struct i2c_msg msgs[2];
-	s32 ret=-1;
-	s32 retries = 0;
+	struct goodix_ts_data *ts = i2c_get_clientdata(client);
+	int ret = -EIO;
+	u8 retries;
+	struct i2c_msg msgs[2] = {
+		{
+			.flags	= !I2C_M_RD,
+			.addr	= client->addr,
+			.len	= GTP_ADDR_LENGTH,
+			.buf	= &buf[0],
+		},
+		{
+			.flags	= I2C_M_RD,
+			.addr	= client->addr,
+			.len	= len - GTP_ADDR_LENGTH,
+			.buf	= &buf[GTP_ADDR_LENGTH],
+		},
+	};
 
-	GTP_DEBUG_FUNC();
-
-	msgs[0].flags = !I2C_M_RD;
-	msgs[0].addr  = client->addr;
-	msgs[0].len   = GTP_ADDR_LENGTH;
-	msgs[0].buf   = &buf[0];
-	//msgs[0].scl_rate = 300 * 1000;    // for Rockchip, etc.
-	
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].addr  = client->addr;
-	msgs[1].len   = len - GTP_ADDR_LENGTH;
-	msgs[1].buf   = &buf[GTP_ADDR_LENGTH];
-	//msgs[1].scl_rate = 300 * 1000;
-
-	while(retries < 5)
-	{
+	for (retries = 0; retries < 5; retries++) {
 		ret = i2c_transfer(client->adapter, msgs, 2);
-		if(ret == 2)break;
-		retries++;
+		if (ret == 2)
+			break;
+		dev_err(&client->dev, "I2C retry: %d\n", retries + 1);
 	}
-	if((retries >= 5))
-	{
-	
-	#if GTP_GESTURE_WAKEUP
-		// reset chip would quit doze mode
-		if (DOZE_ENABLED == doze_status)
-		{
-			return ret;
-		}
-	#endif
-		GTP_ERROR("I2C Read: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
-		{
-			gtp_reset_guitar(client, 10);  
-		}
+	if (retries == 5) {
+		/* reset chip would quit doze mode */
+		if (init_done)
+			gtp_reset_guitar(client, 10);
+		else
+			dev_warn(&client->dev,
+				"gtp_reset_guitar exit init_done=%d:\n",
+				init_done);
 	}
 	return ret;
 }
@@ -173,37 +169,33 @@ Output:
 *********************************************************/
 s32 gtp_i2c_write(struct i2c_client *client,u8 *buf,s32 len)
 {
-	struct i2c_msg msg;
-	s32 ret = -1;
-	s32 retries = 0;
+	struct goodix_ts_data *ts = i2c_get_clientdata(client);
+	int ret = -EIO;
+	u8 retries;
+	struct i2c_msg msg = {
+		.flags = !I2C_M_RD,
+		.addr = client->addr,
+		.len = len,
+		.buf = buf,
+	};
 
-	GTP_DEBUG_FUNC();
-
-	msg.flags = !I2C_M_RD;
-	msg.addr  = client->addr;
-	msg.len   = len;
-	msg.buf   = buf;
-	//msg.scl_rate = 300 * 1000;    // for Rockchip, etc
-
-	while(retries < 5)
-	{
+	for (retries = 0; retries < 5; retries++) {
 		ret = i2c_transfer(client->adapter, &msg, 1);
-		if (ret == 1)break;
-		retries++;
+		if (ret == 1)
+			break;
+		dev_err(&client->dev, "I2C retry: %d\n", retries + 1);
 	}
-	if((retries >= 5))
-	{
-	
-	#if GTP_GESTURE_WAKEUP
-		if (DOZE_ENABLED == doze_status)
-		{
-			return ret;
-		}
-	#endif
+	if (retries == 5) {
 		GTP_ERROR("I2C Write: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
 		{
 			gtp_reset_guitar(client, 10);  
 		}
+		if (init_done)
+			gtp_reset_guitar(client, 10);
+		else
+			dev_warn(&client->dev,
+				"gtp_reset_guitar exit init_done=%d:\n",
+				init_done);
 	}
 	return ret;
 }
@@ -1920,6 +1912,8 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
 #if GTP_ESD_PROTECT
 	gtp_esd_switch(client, SWITCH_ON);
 #endif
+
+init_done = true;
 
 #if GTP_AUTO_UPDATE
 	ret = gup_init_update_proc(ts);
