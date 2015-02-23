@@ -425,7 +425,7 @@ retry:
 					ubi_warn(ubi, "corrupted VID header at PEB %d, LEB %d:%d",
 						 pnum, vol_id, lnum);
 					err = -EBADMSG;
-				} else
+				} else {
 					err = -EINVAL;
 					ubi_ro_mode(ubi);
 				}
