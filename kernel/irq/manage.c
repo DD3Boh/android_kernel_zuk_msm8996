@@ -109,6 +109,14 @@ EXPORT_SYMBOL(synchronize_irq);
 #ifdef CONFIG_SMP
 cpumask_var_t irq_default_affinity;
 
+static int __irq_can_set_affinity(struct irq_desc *desc)
+{
+	if (!desc || !irqd_can_balance(&desc->irq_data) ||
+	    !desc->irq_data.chip || !desc->irq_data.chip->irq_set_affinity)
+		return 0;
+	return 1;
+}
+
 /**
  *	irq_can_set_affinity - Check if the affinity of a given irq can be set
  *	@irq:		Interrupt to check
@@ -116,13 +124,7 @@ cpumask_var_t irq_default_affinity;
  */
 int irq_can_set_affinity(unsigned int irq)
 {
-	struct irq_desc *desc = irq_to_desc(irq);
-
-	if (!desc || !irqd_can_balance(&desc->irq_data) ||
-	    !desc->irq_data.chip || !desc->irq_data.chip->irq_set_affinity)
-		return 0;
-
-	return 1;
+	return __irq_can_set_affinity(irq_to_desc(irq));
 }
 
 /**
@@ -332,7 +334,7 @@ setup_affinity(unsigned int irq, struct irq_desc *desc, struct cpumask *mask)
 	int node = desc->irq_data.node;
 
 	/* Excludes PER_CPU and NO_BALANCE interrupts */
-	if (!irq_can_set_affinity(irq))
+	if (!__irq_can_set_affinity(desc))
 		return 0;
 
 	/*
