@@ -10,7 +10,8 @@ libcomposite-y			:= usbstring.o config.o epautoconf.o
 libcomposite-y			+= composite.o functions.o u_f.o
 
 obj-y				+= debug.o
-g_android-y			:= android.o
+g_android-y			:= android.o function/f_hid.o
+CFLAGS_android.o := -I$(src)
 
 obj-$(CONFIG_USB_GADGET)	+= udc/ function/ legacy/
 
