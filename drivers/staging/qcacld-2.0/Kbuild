@@ -1586,7 +1586,7 @@ KBUILD_CPPFLAGS += $(CDEFINES)
 # WLAN driver.  Note that we must use EXTRA_CFLAGS here so that it
 # will override the kernel settings.
 ifeq ($(call cc-option-yn, -Wmaybe-uninitialized),y)
-EXTRA_CFLAGS += -Wmaybe-uninitialized
+EXTRA_CFLAGS += -Os -Wmaybe-uninitialized
 endif
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the
