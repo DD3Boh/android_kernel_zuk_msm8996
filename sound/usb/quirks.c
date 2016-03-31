@@ -184,6 +184,7 @@ static int create_fixed_stream_quirk(struct snd_usb_audio *chip,
 	return 0;
 
  error:
+	list_del(&fp->list); /* unlink for avoiding double-free */
 	kfree(fp);
 	kfree(rate_table);
 	return err;
