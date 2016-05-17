@@ -40,7 +40,7 @@
 #include <linux/configfs.h>
 #include <linux/usb/composite.h>
 
-#include "configfs.h"
+#include "../configfs.h"
 
 #define MIN_BUFFER_SIZE            16384
 #define MTP_RX_BUFFER_INIT_SIZE    131072
