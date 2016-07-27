@@ -480,15 +480,31 @@ error:
 	return retval;
 }
 
+static void set_fingerprintd_nice(int nice)
+{
+	struct task_struct *p;
+
+	read_lock(&tasklist_lock);
+	for_each_process(p) {
+		if (!memcmp(p->comm, "fingerprintd", 13)) {
+			set_user_nice(p, nice);
+			break;
+		}
+	}
+	read_unlock(&tasklist_lock);
+}
+
 static int fpc1020_resume(struct platform_device *pdev)
 {
 	int retval = 0;
+	set_fingerprintd_nice(MIN_NICE);
 	return retval;
 }
 
 static int fpc1020_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	int retval = 0;
+	set_fingerprintd_nice(0);
 	return retval;
 }
 
