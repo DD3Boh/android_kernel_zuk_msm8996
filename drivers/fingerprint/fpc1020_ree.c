@@ -289,7 +289,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	/* Make sure 'wakeup_enabled' is updated before using it
 	 ** since this is interrupt context (other thread...) */
 	smp_rmb();
-	if (fpc1020->wakeup_enabled) {
+	if (fpc1020->wakeup_enabled && !fpc1020->screen_on) {
 		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
