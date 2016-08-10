@@ -2484,7 +2484,8 @@ static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
 		if (count && (event->status & DEPEVT_STATUS_SHORT))
 			s_pkt = 1;
 	}
-	if (s_pkt)
+
+	if (s_pkt && !chain)
 		return 1;
 	if ((event->status & DEPEVT_STATUS_LST) &&
 			(trb->ctrl & (DWC3_TRB_CTRL_LST |
