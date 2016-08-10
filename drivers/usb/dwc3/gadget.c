@@ -2412,14 +2412,28 @@ static void dwc3_gadget_free_endpoints(struct dwc3 *dwc)
 /* -------------------------------------------------------------------------- */
 
 static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
-		struct dwc3_request *req, struct dwc3_trb *trb, unsigned length,
-		const struct dwc3_event_depevt *event, int status)
+		struct dwc3_request *req, struct dwc3_trb *trb,
+		const struct dwc3_event_depevt *event, int status,
+		int chain)
 {
 	unsigned int		count;
 	unsigned int		s_pkt = 0;
 	unsigned int		trb_status;
 
 	trace_dwc3_complete_trb(dep, trb);
+
+	/*
+	 * If we're in the middle of series of chained TRBs and we
+	 * receive a short transfer along the way, DWC3 will skip
+	 * through all TRBs including the last TRB in the chain (the
+	 * where CHN bit is zero. DWC3 will also avoid clearing HWO
+	 * bit and SW has to do it manually.
+	 *
+	 * We're going to do that here to avoid problems of HW trying
+	 * to use bogus TRBs for transfers.
+	 */
+	if (chain && (trb->ctrl & DWC3_TRB_CTRL_HWO))
+		trb->ctrl &= ~DWC3_TRB_CTRL_HWO;
 
 	if ((trb->ctrl & DWC3_TRB_CTRL_HWO) && status != -ESHUTDOWN)
 		/*
@@ -2432,6 +2446,7 @@ static int __dwc3_cleanup_done_trbs(struct dwc3 *dwc, struct dwc3_ep *dep,
 		 */
 		dev_err(dwc->dev, "%s's TRB (%pK) still owned by HW\n",
 				dep->name, trb);
+
 	count = trb->size & DWC3_TRB_SIZE_MASK;
 
 	if (dep->direction) {
@@ -2492,6 +2507,8 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 	int			ret;
 
 	do {
+		int chain;
+
 		req = next_request(&dep->req_queued);
 		if (!req) {
 			dev_err(dwc->dev, "%s: evt sts %x for no req queued",
@@ -2499,10 +2516,7 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 			return 1;
 		}
 
-		/* Make sure that not to queue any TRB if HWO bit is set. */
-		if (req->trb->ctrl & DWC3_TRB_CTRL_HWO)
-			return 0;
-
+		chain = req->request.num_mapped_sgs > 0;
 		i = 0;
 		do {
 			slot = req->start_slot + i;
@@ -2512,15 +2526,8 @@ static int dwc3_cleanup_done_reqs(struct dwc3 *dwc, struct dwc3_ep *dep,
 			slot %= DWC3_TRB_NUM;
 			trb = &dep->trb_pool[slot];
 			count += trb->size & DWC3_TRB_SIZE_MASK;
-
-
-			if (req->request.num_mapped_sgs)
-				trb_len = sg_dma_len(&req->request.sg[i]);
-			else
-				trb_len = req->request.length;
-
 			ret = __dwc3_cleanup_done_trbs(dwc, dep, req, trb,
-					trb_len, event, status);
+					event, status, chain);
 			if (ret)
 				break;
 		}while (++i < req->request.num_mapped_sgs);
