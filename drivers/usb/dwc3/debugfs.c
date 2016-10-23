@@ -1163,7 +1163,7 @@ int dwc3_debugfs_init(struct dwc3 *dwc)
 #ifdef CONFIG_IPC_LOGGING
 	dwc->dwc_ipc_log_ctxt = ipc_log_context_create(NUM_LOG_PAGES,
 					dev_name(dwc->dev), 0);
-	if (!dwc->dwc_ipc_log_ctxt) {
+	if (!dwc->dwc_ipc_log_ctxt)
 		dev_err(dwc->dev, "Error getting ipc_log_ctxt\n");
 		goto err1;
 	}

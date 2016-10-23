@@ -4202,11 +4202,8 @@ static int ipa3_pre_init(const struct ipa3_plat_drv_res *resource_p,
 	}
 
 	ipa3_ctx->logbuf = ipc_log_context_create(IPA_IPC_LOG_PAGES, "ipa", 0);
-	if (ipa3_ctx->logbuf == NULL) {
+	if (ipa3_ctx->logbuf == NULL)
 		IPAERR("failed to get logbuf\n");
-		result = -ENOMEM;
-		goto fail_logbuf;
-	}
 
 	ipa3_ctx->pdev = ipa_dev;
 	ipa3_ctx->uc_pdev = ipa_dev;
@@ -4709,7 +4706,6 @@ fail_bind:
 	kfree(ipa3_ctx->ctrl);
 fail_mem_ctrl:
 	ipc_log_context_destroy(ipa3_ctx->logbuf);
-fail_logbuf:
 	kfree(ipa3_ctx);
 	ipa3_ctx = NULL;
 fail_mem_ctx:

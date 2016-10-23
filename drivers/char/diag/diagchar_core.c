@@ -157,7 +157,7 @@ static struct mutex apps_data_mutex;
 #define DIAGPKT_MAX_DELAYED_RSP 0xFFFF
 
 #ifdef DIAG_DEBUG
-uint16_t diag_debug_mask;
+uint16_t diag_debug_mask = 0;
 void *diag_ipc_log;
 #endif
 
@@ -3245,8 +3245,10 @@ void diag_ws_release()
 static void diag_debug_init(void)
 {
 	diag_ipc_log = ipc_log_context_create(DIAG_IPC_LOG_PAGES, "diag", 0);
-	if (!diag_ipc_log)
+	if (!diag_ipc_log) {
 		pr_err("diag: Failed to create IPC logging context\n");
+		return;
+	}
 	/*
 	 * Set the bit mask here as per diag_ipc_logging.h to enable debug logs
 	 * to be logged to IPC
