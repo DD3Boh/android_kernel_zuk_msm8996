@@ -1194,6 +1194,12 @@ static const REG_DMN_FREQ_BAND regDmn2Ghz11gTurboFreq[] = {
 };
 #endif /* ATH_REMOVE_2G_TURBO_RD_TABLE */
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wshift-count-negative"
+#pragma clang diagnostic ignored "-Wshift-count-overflow"
+#endif
+
 static const REG_DOMAIN ahCmnRegDomains[] = {
 
 	{DEBUG_REG_DMN, FCC, DFS_FCC3, NO_PSCAN, NO_REQ,
@@ -1979,6 +1985,10 @@ static const REG_DOMAIN ahCmnRegDomains[] = {
 		CHAN_TURBO_G_BMZERO
 	},
 };
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 static const struct cmode modes[] = {
 	{ REGDMN_MODE_TURBO,               IEEE80211_CHAN_ST}, /* TURBO means 11a Static Turbo */
