@@ -4659,7 +4659,7 @@ static int smbchg_set_optimal_charging_mode(struct smbchg_chip *chip, int type)
 static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 						enum power_supply_type type)
 {
-	int rc, current_limit_ma;
+	int rc, current_limit_ma = DEFAULT_SDP_MA;
 	union power_supply_propval propval;
 
 	/*
