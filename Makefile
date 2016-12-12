@@ -462,9 +462,10 @@ KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs 
 		   -Wno-discarded-qualifiers \
 		   -Wno-logical-not-parentheses \
 		   -Wno-misleading-indentation \
-		   -std=gnu89 \
-		   -mcpu=cortex-a57.cortex-a53 \
-		   -mtune=cortex-a57.cortex-a53
+		   -std=gnu89 
+
+# Optimization for Kryo
+KBUILD_CFLAGS	+= -mcpu=cortex-a57
 
 KBUILD_AFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
 KBUILD_CFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
