@@ -866,7 +866,9 @@ static void __hdd_tx_timeout(struct net_device *dev)
       hddLog(LOGE, FL("Queue%d status: %d txq->trans_start %lu"),
              i, netif_tx_queue_stopped(txq), txq->trans_start);
    }
+#if defined( WLAN_DEBUG )
    wlan_display_tx_timeout_stats(pAdapter);
+#endif
 }
 
 /**
