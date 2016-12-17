@@ -249,6 +249,23 @@ struct dwc3_msm {
 	bool			init;
 };
 
+int otg_switch = 1;
+struct dwc3_msm *opmdwc;
+
+static  int oem_test_id(int nr, const volatile unsigned long *addr, enum usb_otg_state otg_state)
+{
+	int ret = 0;
+
+	if (0 == otg_switch) {
+		ret = 1;
+	} else {
+		ret = test_bit(nr, addr);
+	}
+	printk("oem_test_id ret:%d, otg_switch:%d, otg_state:%d\n", ret, otg_switch, otg_state);
+	return ret;
+}
+bool check_P3_ready = false;
+
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
 #define USB_HSPHY_3P3_VOL_MAX		3300000 /* uV */
 #define USB_HSPHY_3P3_HPM_LOAD		16000	/* uA */
