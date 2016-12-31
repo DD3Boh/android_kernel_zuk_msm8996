@@ -53,7 +53,25 @@ struct fpc1020_data {
 	struct workqueue_struct *fpc1020_wq;
 	u8  report_key;
 	int __read_mostly screen_on;
+	int proximity_state; /* 0:far 1:near */
 };
+
+static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
+{
+	if (enabled != fpc1020->irq) {
+		if (enabled)
+			enable_irq(gpio_to_irq(fpc1020->irq_gpio));
+		else
+			disable_irq(gpio_to_irq(fpc1020->irq_gpio));
+
+		dev_info(fpc1020->dev, "%s: %s fpc irq ---\n", __func__,
+				 enabled ?  "1" : "0");
+		fpc1020->irq = enabled;
+	} else {
+		dev_info(fpc1020->dev, "%s: dual config irq status: %s\n", __func__,
+				 enabled ?  "1" : "0");
+	}
+}
 
 /* From drivers/input/keyboard/gpio_keys.c */
 extern bool home_button_pressed(void);
@@ -137,9 +155,33 @@ static ssize_t set_key(struct device *device,
 
 static DEVICE_ATTR(key, S_IRUSR | S_IWUSR, get_key, set_key);
 
+static ssize_t proximity_state_set(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+	int rc, val;
+	rc = kstrtoint(buf, 10, &val);
+	if (rc)
+		return -EINVAL;
+	fpc1020->proximity_state = !!val;
+	if (!fpc1020->screen_on) {
+		if (fpc1020->proximity_state == 1) {
+			/* Disable IRQ when screen is off and proximity sensor is covered */
+			config_irq(fpc1020, false);
+		} else if (fpc1020->wakeup_enabled == 1) {
+			/* Enable IRQ when screen is off and proximity sensor is uncovered,
+			 but only if fingerprint wake up is enabled */
+			 config_irq(fpc1020, true);
+		}
+	}
+	return count;
+}
+static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
+
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
+	&dev_attr_proximity_state.attr,
 	NULL
 };
 
@@ -345,9 +387,13 @@ static int fb_notifier_callback(struct notifier_block *self,
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = 1;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
+			/* Unconditionally enable IRQ when screen turns on */
+			config_irq(fpc1020, true);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
+			if (fpc1020->wakeup_enabled == 0)
+				config_irq(fpc1020, false);
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
