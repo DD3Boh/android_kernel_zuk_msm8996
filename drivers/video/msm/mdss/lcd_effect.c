@@ -392,7 +392,7 @@ static struct dsi_cmd_desc *copy_used_effect_code(struct panel_effect_data *pane
 	temp = copy_single_effect_code(panel_data, temp, EFFECT_HBM, effect[EFFECT_HBM].level, cnt);
 
 	#else//z2_plus
-	temp = copy_single_effect_code(panel_data, temp, EFFECT_CT, effect[EFFECT_CT].level, cnt);
+	temp = copy_single_effect_code(panel_data, temp, EFFECT_CE, effect[EFFECT_CE].level, cnt);
 	#ifdef CONFIG_PRODUCT_Z2_X
 	temp = copy_single_effect_code(panel_data, temp, EFFECT_CABC, effect[EFFECT_CABC].level, cnt);
 	#endif
