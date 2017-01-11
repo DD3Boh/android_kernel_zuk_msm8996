@@ -239,7 +239,7 @@ enum {
 #define MAX_DISCARD_BLOCKS(sbi)		BLKS_PER_SEC(sbi)
 #define DISCARD_ISSUE_RATE		8
 #define DEF_CP_INTERVAL			60	/* 60 secs */
-#define DEF_IDLE_INTERVAL		5	/* 5 secs */
+#define DEF_IDLE_INTERVAL		120	/* 2 mins */
 
 struct cp_control {
 	int reason;
