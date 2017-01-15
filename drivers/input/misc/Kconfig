@@ -756,4 +756,14 @@ config INPUT_DRV2667_HAPTICS
 	  To compile this driver as a module, choose M here: the
 	  module will be called drv260x-haptics.
 
+config SENSORS_HALL
+	tristate "Rohm hall ic"
+	depends on INPUT
+	default y
+	help
+	  Say Y here to enable the Rohm hall sensor
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called CM36283.
+
 endif

@@ -1059,8 +1059,9 @@ static int ft5x06_power_init(struct ft5x06_ts_data *data, bool on)
 	}
 
 	if (regulator_count_voltages(data->vdd) > 0) {
-		rc = regulator_set_voltage(data->vdd, FT_VTG_MIN_UV,
-					   FT_VTG_MAX_UV);
+//		rc = regulator_set_voltage(data->vdd, FT_VTG_MIN_UV,
+//					   FT_VTG_MAX_UV);
+		rc = regulator_enable(data->vdd);
 		if (rc) {
 			dev_err(&data->client->dev,
 				"Regulator set_vtg failed vdd rc=%d\n", rc);
@@ -1077,8 +1078,9 @@ static int ft5x06_power_init(struct ft5x06_ts_data *data, bool on)
 	}
 
 	if (regulator_count_voltages(data->vcc_i2c) > 0) {
-		rc = regulator_set_voltage(data->vcc_i2c, FT_I2C_VTG_MIN_UV,
-					   FT_I2C_VTG_MAX_UV);
+		rc = regulator_enable(data->vcc_i2c);
+//		rc = regulator_set_voltage(data->vcc_i2c, FT_I2C_VTG_MIN_UV,
+//					   FT_I2C_VTG_MAX_UV);
 		if (rc) {
 			dev_err(&data->client->dev,
 			"Regulator set_vtg failed vcc_i2c rc=%d\n", rc);

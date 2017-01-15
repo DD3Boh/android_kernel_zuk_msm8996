@@ -23,7 +23,7 @@
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
-#include <linux/gpio/consumer.h>
+#include <linux/gpio.h>
 #include <linux/regulator/consumer.h>
 
 #include <dt-bindings/input/ti-drv260x.h>
@@ -195,16 +195,23 @@ struct drv260x_data {
 	struct i2c_client *client;
 	struct regmap *regmap;
 	struct work_struct work;
-	struct gpio_desc *enable_gpio;
+	int enable_gpio;
+	int pwm_gpio;
 	struct regulator *regulator;
 	u32 magnitude;
 	u32 mode;
 	u32 library;
 	int rated_voltage;
 	int overdrive_voltage;
+	int drive_time;
+	struct pinctrl_state *pin_active;
+	struct pinctrl_state *pin_sleep;
+	struct pinctrl *pinctrl;
+	int init_result;
+	struct work_struct init_work;
 };
 
-static struct reg_default drv260x_reg_defs[] = {
+static const struct reg_default drv260x_reg_defs[] = {
 	{ DRV260X_STATUS, 0xe0 },
 	{ DRV260X_MODE, 0x40 },
 	{ DRV260X_RT_PB_IN, 0x00 },
@@ -245,15 +252,23 @@ static struct reg_default drv260x_reg_defs[] = {
 #define DRV260X_DEF_RATED_VOLT		0x90
 #define DRV260X_DEF_OD_CLAMP_VOLT	0x90
 
+static int drv260x_calculate_drivetime(unsigned int frequency)
+{
+	return (5000/frequency-5);
+}
 /**
  * Rated and Overdriver Voltages:
  * Calculated using the formula r = v * 255 / 5.6
  * where r is what will be written to the register
  * and v is the rated or overdriver voltage of the actuator
  **/
-static int drv260x_calculate_voltage(unsigned int voltage)
+static int drv260x_calculate_overvoltage(unsigned int voltage)
 {
 	return (voltage * 255 / 5600);
+}
+static int drv260x_calculate_ratedvoltage(unsigned int voltage)
+{
+	return (voltage * 255 / 5300);
 }
 
 static void drv260x_worker(struct work_struct *work)
@@ -261,21 +276,31 @@ static void drv260x_worker(struct work_struct *work)
 	struct drv260x_data *haptics = container_of(work, struct drv260x_data, work);
 	int error;
 
-	gpiod_set_value(haptics->enable_gpio, 1);
+	if(!haptics->magnitude){
+		error = regmap_write(haptics->regmap, DRV260X_MODE, DRV260X_STANDBY);
+		if (error)
+			dev_err(&haptics->client->dev,
+				"Failed to enter standby mode: %d\n", error);
+		gpio_set_value(haptics->enable_gpio, 0);
+		return;
+	}
+
+	gpio_set_value(haptics->enable_gpio, 1);
 	/* Data sheet says to wait 250us before trying to communicate */
 	udelay(250);
+
+	error = regmap_write(haptics->regmap,
+			     DRV260X_RT_PB_IN, haptics->magnitude);
+	if (error)
+		dev_err(&haptics->client->dev,
+			"Failed to set magnitude: %d\n", error);
 
 	error = regmap_write(haptics->regmap,
 			     DRV260X_MODE, DRV260X_RT_PLAYBACK);
 	if (error) {
 		dev_err(&haptics->client->dev,
 			"Failed to write set mode: %d\n", error);
-	} else {
-		error = regmap_write(haptics->regmap,
-				     DRV260X_RT_PB_IN, haptics->magnitude);
-		if (error)
-			dev_err(&haptics->client->dev,
-				"Failed to set magnitude: %d\n", error);
+		return;
 	}
 }
 
@@ -283,15 +308,21 @@ static int drv260x_haptics_play(struct input_dev *input, void *data,
 				struct ff_effect *effect)
 {
 	struct drv260x_data *haptics = input_get_drvdata(input);
+	int magnitude = 0;
+
+	if(!haptics->init_result)
+		return 0;//-EBUSY
 
 	haptics->mode = DRV260X_LRA_NO_CAL_MODE;
 
 	if (effect->u.rumble.strong_magnitude > 0)
-		haptics->magnitude = effect->u.rumble.strong_magnitude;
+		magnitude = effect->u.rumble.strong_magnitude;
 	else if (effect->u.rumble.weak_magnitude > 0)
-		haptics->magnitude = effect->u.rumble.weak_magnitude;
+		magnitude = effect->u.rumble.weak_magnitude;
 	else
-		haptics->magnitude = 0;
+		magnitude = 0;
+
+	haptics->magnitude = magnitude >> 8;
 
 	schedule_work(&haptics->work);
 
@@ -310,14 +341,21 @@ static void drv260x_close(struct input_dev *input)
 		dev_err(&haptics->client->dev,
 			"Failed to enter standby mode: %d\n", error);
 
-	gpiod_set_value(haptics->enable_gpio, 0);
+	gpio_set_value(haptics->enable_gpio, 0);
 }
 
 static const struct reg_default drv260x_lra_cal_regs[] = {
-	{ DRV260X_MODE, DRV260X_AUTO_CAL },
-	{ DRV260X_CTRL3, DRV260X_NG_THRESH_2 },
-	{ DRV260X_FEEDBACK_CTRL, DRV260X_FB_REG_LRA_MODE |
-		DRV260X_BRAKE_FACTOR_4X | DRV260X_LOOP_GAIN_HIGH },
+	{0x16, 0x2d},
+	{0x17, 0x9b},
+	{0x18, 0x0b},
+	{0x19, 0xcf},
+	{0x1a, 0xb7},
+	{0x1b, 0x90},
+	//{0x1c, 0xf5},
+	{0x1c, 0x75},
+	//{0x1d, 0xa0},
+	{0x1d, 0xa8},
+	{0x1e, 0x20},
 };
 
 static const struct reg_default drv260x_lra_init_regs[] = {
@@ -352,110 +390,205 @@ static const struct reg_default drv260x_erm_cal_regs[] = {
 	{ DRV260X_CTRL4, DRV260X_AUTOCAL_TIME_500MS },
 };
 
-static int drv260x_init(struct drv260x_data *haptics)
+static ssize_t drv260x_dump(struct device *dev, 
+		struct device_attribute *attr, char *buf)
 {
-	int error;
-	unsigned int cal_buf;
-
-	error = regmap_write(haptics->regmap,
-			     DRV260X_RATED_VOLT, haptics->rated_voltage);
-	if (error) {
-		dev_err(&haptics->client->dev,
-			"Failed to write DRV260X_RATED_VOLT register: %d\n",
-			error);
-		return error;
+	struct drv260x_data *haptics = dev_get_drvdata(dev);
+	int i,value;
+	int idx = 0;
+	
+	for(i=0;i<ARRAY_SIZE(drv260x_reg_defs);i++){
+		regmap_read(haptics->regmap,drv260x_reg_defs[i].reg,&value);
+		idx+=sprintf(&buf[idx],"0x%02x register = 0x%02x\n",drv260x_reg_defs[i].reg,value);
 	}
 
-	error = regmap_write(haptics->regmap,
-			     DRV260X_OD_CLAMP_VOLT, haptics->overdrive_voltage);
-	if (error) {
-		dev_err(&haptics->client->dev,
-			"Failed to write DRV260X_OD_CLAMP_VOLT register: %d\n",
-			error);
-		return error;
+	return idx;
+}
+
+static ssize_t drv260x_reg_control(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	char rw[10];
+	int reg,value;
+	struct drv260x_data *haptics = dev_get_drvdata(dev);
+
+	sscanf(buf,"%s %x %x",rw,&reg, &value);
+	if(!strcmp(rw,"read")){
+		regmap_read(haptics->regmap,reg,&value);
+		dev_info(&haptics->client->dev,"read from [%x] value = 0x%2x\n", reg, value);
+	}else if(!strcmp(rw,"write")){
+#ifndef CONFIG_USER_KERNEL
+		regmap_write(haptics->regmap, reg, value);
+		dev_info(&haptics->client->dev,"write to [%x] value = 0x%2x\n", reg, value);
+#else
+		dev_info(&haptics->client->dev,"write is disabled from userspace\n");
+#endif
 	}
 
-	switch (haptics->mode) {
-	case DRV260X_LRA_MODE:
-		error = regmap_register_patch(haptics->regmap,
-					      drv260x_lra_cal_regs,
-					      ARRAY_SIZE(drv260x_lra_cal_regs));
-		if (error) {
-			dev_err(&haptics->client->dev,
-				"Failed to write LRA calibration registers: %d\n",
-				error);
-			return error;
-		}
+	return size;
+}
 
-		break;
+static ssize_t drv260x_enable(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t size)
+{
+	int value;
+	struct drv260x_data *haptics = dev_get_drvdata(dev);
 
-	case DRV260X_ERM_MODE:
-		error = regmap_register_patch(haptics->regmap,
-					      drv260x_erm_cal_regs,
-					      ARRAY_SIZE(drv260x_erm_cal_regs));
-		if (error) {
-			dev_err(&haptics->client->dev,
-				"Failed to write ERM calibration registers: %d\n",
-				error);
-			return error;
-		}
+	sscanf(buf,"%d", &value);
 
-		error = regmap_update_bits(haptics->regmap, DRV260X_LIB_SEL,
-					   DRV260X_LIB_SEL_MASK,
-					   haptics->library);
-		if (error) {
-			dev_err(&haptics->client->dev,
-				"Failed to write DRV260X_LIB_SEL register: %d\n",
-				error);
-			return error;
-		}
+	gpio_set_value(haptics->enable_gpio, !!value);
 
-		break;
+	return size;
+}
 
-	default:
-		error = regmap_register_patch(haptics->regmap,
-					      drv260x_lra_init_regs,
-					      ARRAY_SIZE(drv260x_lra_init_regs));
-		if (error) {
-			dev_err(&haptics->client->dev,
-				"Failed to write LRA init registers: %d\n",
-				error);
-			return error;
-		}
+static DEVICE_ATTR(dump, S_IRUGO, drv260x_dump, NULL);
+static DEVICE_ATTR(reg_control, S_IWUSR, NULL, drv260x_reg_control);
+static DEVICE_ATTR(enable, S_IWUSR, NULL, drv260x_enable);
 
-		error = regmap_update_bits(haptics->regmap, DRV260X_LIB_SEL,
-					   DRV260X_LIB_SEL_MASK,
-					   haptics->library);
-		if (error) {
-			dev_err(&haptics->client->dev,
-				"Failed to write DRV260X_LIB_SEL register: %d\n",
-				error);
-			return error;
-		}
+static struct attribute *drv260x_attrs[] = {
+	&dev_attr_dump.attr,
+	&dev_attr_reg_control.attr,
+	&dev_attr_enable.attr,
+	NULL,
+};
 
-		/* No need to set GO bit here */
-		return 0;
-	}
+static struct attribute_group drv260x_attr_group = {
+	.attrs = drv260x_attrs,
+};
 
-	error = regmap_write(haptics->regmap, DRV260X_GO, DRV260X_GO_BIT);
+static int drv260x_do_reset(struct drv260x_data *haptics)
+{
+	int error; 
+	unsigned int result;
+
+	error = regmap_write(haptics->regmap, DRV260X_MODE, 1<<7);
 	if (error) {
 		dev_err(&haptics->client->dev,
-			"Failed to write GO register: %d\n",
-			error);
+			"(%d) Failed to write DRV260X_MODE register: %d\n",
+			__LINE__,error);
 		return error;
 	}
 
 	do {
-		error = regmap_read(haptics->regmap, DRV260X_GO, &cal_buf);
+		usleep_range(20000,50000);
+		error = regmap_read(haptics->regmap, DRV260X_MODE, &result);
 		if (error) {
 			dev_err(&haptics->client->dev,
-				"Failed to read GO register: %d\n",
-				error);
+				"(%d) Failed to read DRV260X_MODE register: %d\n",
+				__LINE__,error);
 			return error;
 		}
-	} while (cal_buf == DRV260X_GO_BIT);
+	} while (result&(1<<7));
 
 	return 0;
+
+}
+
+static int drv260x_cal(struct drv260x_data *haptics)
+{
+	int error;
+	unsigned int val;
+
+	error = regmap_write(haptics->regmap, DRV260X_MODE, DRV260X_AUTO_CAL);
+	if (error) {
+		dev_err(&haptics->client->dev,
+				"Failed to write DRV260X_MODE register: %d\n",
+				error);
+		return error;
+	}
+
+
+	error = regmap_write(haptics->regmap, DRV260X_GO, DRV260X_GO_BIT);
+	if (error) {
+		dev_err(&haptics->client->dev,
+				"Failed to write GO register: %d\n",
+				error);
+		return error;
+	}
+
+	do {
+		usleep_range(10000,50000);
+		error = regmap_read(haptics->regmap, DRV260X_GO, &val);
+		if (error) {
+			dev_err(&haptics->client->dev,
+					"Failed to read GO register: %d\n",
+					error);
+			return error;
+		}
+	} while (val == DRV260X_GO_BIT);
+
+	error = regmap_read(haptics->regmap, DRV260X_STATUS, &val);
+	if (error) {
+		dev_err(&haptics->client->dev,
+				"Failed to read status register: %d\n",
+				error);
+		return error;
+	}
+
+	if(val&(1<<3)){
+		dev_err(&haptics->client->dev,
+				"Failed to calibration\n");
+		return -ENODEV;
+	}
+
+	//regmap_read(haptics->regmap, 0x18, &val);printk("drv260x: reg[0x18] = 0x%02x\n",val);
+	//regmap_read(haptics->regmap, 0x19, &val);printk("drv260x: reg[0x19] = 0x%02x\n",val);
+	//regmap_read(haptics->regmap, 0x1a, &val);printk("drv260x: reg[0x1a] = 0x%02x\n",val);
+	dev_info(&haptics->client->dev,"Calibration Passed\n");
+
+	return 0;
+
+}
+
+static void drv260x_do_init_work(struct work_struct *init_work)
+{
+	struct drv260x_data *haptics = container_of(init_work, struct drv260x_data, init_work);
+	int error;
+
+	gpio_set_value(haptics->enable_gpio, 1);
+	udelay(250);
+
+	error = drv260x_do_reset(haptics);
+	if(error)
+		goto err_return;
+
+	error = regmap_register_patch(haptics->regmap,
+			drv260x_lra_cal_regs,
+			ARRAY_SIZE(drv260x_lra_cal_regs));
+	if (error) {
+		dev_err(&haptics->client->dev,
+				"Failed to write LRA cal registers: %d\n",
+				error);
+		goto err_return;
+	}
+
+	error = drv260x_cal(haptics);
+	if(error){
+		goto err_return;
+	}
+
+	error = regmap_update_bits(haptics->regmap, DRV260X_LIB_SEL,
+			DRV260X_LIB_SEL_MASK,
+			haptics->library);
+	if (error) {
+		dev_err(&haptics->client->dev,
+				"Failed to write DRV260X_LIB_SEL register: %d\n",
+				error);
+		goto err_return;
+	}
+
+	haptics->init_result = 1;
+	gpio_set_value(haptics->enable_gpio, 0);
+
+	return;
+
+err_return:
+	haptics->init_result = 0;
+	gpio_set_value(haptics->enable_gpio, 0);
+
+
 }
 
 static const struct regmap_config drv260x_regmap_config = {
@@ -473,8 +606,34 @@ static int drv260x_parse_dt(struct device *dev,
 			    struct drv260x_data *haptics)
 {
 	struct device_node *np = dev->of_node;
-	unsigned int voltage;
+	unsigned int voltage,frequency;
 	int error;
+
+        haptics->pinctrl = devm_pinctrl_get(dev);
+        if (IS_ERR_OR_NULL(haptics->pinctrl)) {
+                error = -ENODEV;
+		return error;
+        }
+
+        haptics->pin_active = pinctrl_lookup_state(haptics->pinctrl, "haptics_en_active");
+        if (IS_ERR(haptics->pin_active)) {
+                dev_err(dev, "Unable find haptics_en_active\n");
+                error = PTR_ERR(haptics->pin_active);
+		return error;
+        }
+
+        haptics->pin_sleep = pinctrl_lookup_state(haptics->pinctrl, "haptics_en_sleep");
+        if (IS_ERR(haptics->pin_sleep)) {
+                dev_err(dev, "Unable find haptics_en_sleep\n");
+                error = PTR_ERR(haptics->pin_sleep);
+		return error;
+        }
+
+        error = pinctrl_select_state(haptics->pinctrl, haptics->pin_active);
+        if (error < 0) {
+                dev_err(dev, "Unable select active state in pinctrl\n");
+		return error;
+        }
 
 	error = of_property_read_u32(np, "mode", &haptics->mode);
 	if (error) {
@@ -491,12 +650,22 @@ static int drv260x_parse_dt(struct device *dev,
 
 	error = of_property_read_u32(np, "vib-rated-mv", &voltage);
 	if (!error)
-		haptics->rated_voltage = drv260x_calculate_voltage(voltage);
+		haptics->rated_voltage = drv260x_calculate_ratedvoltage(voltage);
 
 
 	error = of_property_read_u32(np, "vib-overdrive-mv", &voltage);
 	if (!error)
-		haptics->overdrive_voltage = drv260x_calculate_voltage(voltage);
+		haptics->overdrive_voltage = drv260x_calculate_overvoltage(voltage);
+
+	of_property_read_u32(np, "vib-frequency", &frequency);
+	if (!error)
+		haptics->drive_time = drv260x_calculate_drivetime(frequency);
+
+	haptics->enable_gpio = of_get_named_gpio(np, "enable-gpio", 0);
+	if (!gpio_is_valid(haptics->enable_gpio))
+		return haptics->enable_gpio;
+
+	haptics->pwm_gpio = of_get_named_gpio(np, "pwm-gpio", 0);
 
 	return 0;
 }
@@ -521,16 +690,16 @@ static int drv260x_probe(struct i2c_client *client,
 	if (!haptics)
 		return -ENOMEM;
 
-	haptics->rated_voltage = DRV260X_DEF_OD_CLAMP_VOLT;
+	haptics->overdrive_voltage = DRV260X_DEF_OD_CLAMP_VOLT;
 	haptics->rated_voltage = DRV260X_DEF_RATED_VOLT;
 
 	if (pdata) {
 		haptics->mode = pdata->mode;
 		haptics->library = pdata->library_selection;
 		if (pdata->vib_overdrive_voltage)
-			haptics->overdrive_voltage = drv260x_calculate_voltage(pdata->vib_overdrive_voltage);
+			haptics->overdrive_voltage = drv260x_calculate_overvoltage(pdata->vib_overdrive_voltage);
 		if (pdata->vib_rated_voltage)
-			haptics->rated_voltage = drv260x_calculate_voltage(pdata->vib_rated_voltage);
+			haptics->rated_voltage = drv260x_calculate_ratedvoltage(pdata->vib_rated_voltage);
 	} else if (client->dev.of_node) {
 		error = drv260x_parse_dt(&client->dev, haptics);
 		if (error)
@@ -574,20 +743,42 @@ static int drv260x_probe(struct i2c_client *client,
 
 	haptics->regulator = devm_regulator_get(&client->dev, "vbat");
 	if (IS_ERR(haptics->regulator)) {
-		error = PTR_ERR(haptics->regulator);
-		dev_err(&client->dev,
-			"unable to get regulator, error: %d\n", error);
-		return error;
+		dev_info(&client->dev, "Can't get regulator\n");
+		//return -ENODEV;
 	}
 
-	haptics->enable_gpio = devm_gpiod_get(&client->dev, "enable");
-	if (IS_ERR(haptics->enable_gpio)) {
-		error = PTR_ERR(haptics->enable_gpio);
-		if (error != -ENOENT && error != -ENOSYS)
-			return error;
-		haptics->enable_gpio = NULL;
-	} else {
-		gpiod_direction_output(haptics->enable_gpio, 1);
+	if(gpio_is_valid(haptics->enable_gpio)){
+		error = gpio_request(haptics->enable_gpio, "drv260x_enable_gpio");
+                if (error) {
+                        dev_err(&client->dev,
+                                        "%s-->unable to request gpio [%d]\n",
+                                        __func__,haptics->enable_gpio);
+			return -EINVAL;
+                }
+                error = gpio_direction_output(haptics->enable_gpio,0);
+                if (error) {
+                        dev_err(&client->dev,
+                                "%s-->unable to set direction for gpio [%d]\n",
+                                __func__,haptics->enable_gpio);
+                        return -EINVAL;
+                }
+	}
+
+	if(gpio_is_valid(haptics->pwm_gpio)){
+		error = gpio_request(haptics->pwm_gpio, "drv260x_pwm_gpio");
+                if (error) {
+                        dev_err(&client->dev,
+                                        "%s-->unable to request gpio [%d]\n",
+                                        __func__,haptics->pwm_gpio);
+			return -EINVAL;
+                }
+                error = gpio_direction_output(haptics->pwm_gpio,0);
+                if (error) {
+                        dev_err(&client->dev,
+                                "%s-->unable to set direction for gpio [%d]\n",
+                                __func__,haptics->pwm_gpio);
+                        return -EINVAL;
+                }
 	}
 
 	haptics->input_dev = devm_input_allocate_device(&client->dev);
@@ -611,6 +802,7 @@ static int drv260x_probe(struct i2c_client *client,
 	}
 
 	INIT_WORK(&haptics->work, drv260x_worker);
+	INIT_WORK(&haptics->init_work, drv260x_do_init_work);
 
 	haptics->client = client;
 	i2c_set_clientdata(client, haptics);
@@ -623,11 +815,7 @@ static int drv260x_probe(struct i2c_client *client,
 		return error;
 	}
 
-	error = drv260x_init(haptics);
-	if (error) {
-		dev_err(&client->dev, "Device init failed: %d\n", error);
-		return error;
-	}
+	schedule_work(&haptics->init_work);
 
 	error = input_register_device(haptics->input_dev);
 	if (error) {
@@ -636,11 +824,19 @@ static int drv260x_probe(struct i2c_client *client,
 		return error;
 	}
 
+
+	error = sysfs_create_group(&client->dev.kobj, &drv260x_attr_group);
+	if (error) {
+		dev_err(&client->dev,
+				"%s-->Unable to create sysfs,"
+				" errors: %d\n", __func__, error);
+		return error;
+	}
+
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int drv260x_suspend(struct device *dev)
+static int __maybe_unused drv260x_suspend(struct device *dev)
 {
 	struct drv260x_data *haptics = dev_get_drvdata(dev);
 	int ret = 0;
@@ -657,14 +853,22 @@ static int drv260x_suspend(struct device *dev)
 			goto out;
 		}
 
-		gpiod_set_value(haptics->enable_gpio, 0);
+		gpio_set_value(haptics->enable_gpio, 0);
+	
+		ret = pinctrl_select_state(haptics->pinctrl, haptics->pin_sleep);
+		if (ret < 0) {
+			dev_err(dev, "Unable select active state in pinctrl\n");
+			goto out;
+        	}
 
-		ret = regulator_disable(haptics->regulator);
-		if (ret) {
-			dev_err(dev, "Failed to disable regulator\n");
-			regmap_update_bits(haptics->regmap,
-					   DRV260X_MODE,
-					   DRV260X_STANDBY_MASK, 0);
+		if (!IS_ERR(haptics->regulator)) {
+			ret = regulator_disable(haptics->regulator);
+			if (ret) {
+				dev_err(dev, "Failed to disable regulator\n");
+				regmap_update_bits(haptics->regmap,
+						DRV260X_MODE,
+						DRV260X_STANDBY_MASK, 0);
+			}
 		}
 	}
 out:
@@ -672,7 +876,7 @@ out:
 	return ret;
 }
 
-static int drv260x_resume(struct device *dev)
+static int __maybe_unused drv260x_resume(struct device *dev)
 {
 	struct drv260x_data *haptics = dev_get_drvdata(dev);
 	int ret = 0;
@@ -680,29 +884,39 @@ static int drv260x_resume(struct device *dev)
 	mutex_lock(&haptics->input_dev->mutex);
 
 	if (haptics->input_dev->users) {
-		ret = regulator_enable(haptics->regulator);
-		if (ret) {
-			dev_err(dev, "Failed to enable regulator\n");
-			goto out;
+		if (!IS_ERR(haptics->regulator)) {
+			ret = regulator_enable(haptics->regulator);
+			if (ret) {
+				dev_err(dev, "Failed to enable regulator\n");
+				goto out;
+			}
 		}
+
+		ret = pinctrl_select_state(haptics->pinctrl, haptics->pin_active);
+		if (ret < 0) {
+			dev_err(dev, "Unable select active state in pinctrl\n");
+			goto out;
+        	}
+#if 0
+		gpio_set_value(haptics->enable_gpio, 1);
 
 		ret = regmap_update_bits(haptics->regmap,
-					 DRV260X_MODE,
-					 DRV260X_STANDBY_MASK, 0);
+				DRV260X_MODE,
+				DRV260X_STANDBY_MASK, 0);
 		if (ret) {
 			dev_err(dev, "Failed to unset standby mode\n");
-			regulator_disable(haptics->regulator);
+			if (!IS_ERR(haptics->regulator)) {
+				regulator_disable(haptics->regulator);
+			}
 			goto out;
 		}
-
-		gpiod_set_value(haptics->enable_gpio, 1);
+#endif
 	}
 
 out:
 	mutex_unlock(&haptics->input_dev->mutex);
 	return ret;
 }
-#endif
 
 static SIMPLE_DEV_PM_OPS(drv260x_pm_ops, drv260x_suspend, drv260x_resume);
 
@@ -727,7 +941,6 @@ static struct i2c_driver drv260x_driver = {
 	.probe		= drv260x_probe,
 	.driver		= {
 		.name	= "drv260x-haptics",
-		.owner	= THIS_MODULE,
 		.of_match_table = of_match_ptr(drv260x_of_match),
 		.pm	= &drv260x_pm_ops,
 	},
@@ -735,7 +948,6 @@ static struct i2c_driver drv260x_driver = {
 };
 module_i2c_driver(drv260x_driver);
 
-MODULE_ALIAS("platform:drv260x-haptics");
 MODULE_DESCRIPTION("TI DRV260x haptics driver");
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Dan Murphy <dmurphy@ti.com>");
