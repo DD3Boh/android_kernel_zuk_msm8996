@@ -302,12 +302,35 @@ static struct kobj_attribute cpu_normalized_load_attr =
 	__ATTR(cpu_normalized_load, S_IWUSR | S_IRUSR, show_cpu_normalized_load,
 			NULL);
 
+#ifdef SUPPORT_HEAVY_APP_POWER_OP
+static ssize_t show_mpctl(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	return snprintf(buf, PAGE_SIZE, "%s\n", rq_info.mpctl);
+}
+
+static ssize_t store_mpctl(struct kobject *kobj,
+		struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	snprintf(rq_info.mpctl, MPCTL_MAX_CMD, "%s", buf);
+    sysfs_notify(rq_info.kobj, NULL, "mpctl");
+	return count;
+}
+#endif
+
+static struct kobj_attribute mpctl_attr =
+	__ATTR(mpctl, S_IWUSR | S_IRUSR, show_mpctl,
+			store_mpctl);
+
 static struct attribute *rq_attrs[] = {
 	&cpu_normalized_load_attr.attr,
 	&def_timer_ms_attr.attr,
 	&run_queue_avg_attr.attr,
 	&run_queue_poll_ms_attr.attr,
 	&hotplug_disabled_attr.attr,
+#ifdef SUPPORT_HEAVY_APP_POWER_OP
+	&mpctl_attr.attr,
+#endif
 	NULL,
 };
 
@@ -320,6 +343,9 @@ static int init_rq_attribs(void)
 	int err;
 
 	rq_info.rq_avg = 0;
+#ifdef SUPPORT_HEAVY_APP_POWER_OP
+    rq_info.mpctl[0] = '0';
+#endif
 	rq_info.attr_group = &rq_attr_group;
 
 	/* Create /sys/devices/system/cpu/cpu0/rq-stats/... */

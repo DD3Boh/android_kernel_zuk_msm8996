@@ -219,6 +219,34 @@ static const struct kernel_param_ops param_ops_num_clusters = {
 };
 device_param_cb(num_clusters, &param_ops_num_clusters, NULL, 0644);
 
+/* Zuk overfreq---- start ---- */
+unsigned int overfreq_enable = 0;
+extern int cpufreq_overfreq(unsigned int enable);
+static int set_overfreq(const char *buf, const struct kernel_param *kp)
+{
+	unsigned int val;
+
+	if (sscanf(buf, "%u\n", &val) != 1)
+		return -EINVAL;
+
+	overfreq_enable = val;
+
+	cpufreq_overfreq(overfreq_enable);
+	return 0;
+}
+
+static int get_overfreq(char *buf, const struct kernel_param *kp)
+{
+	return snprintf(buf, PAGE_SIZE, "%u", overfreq_enable);
+}
+
+static const struct kernel_param_ops param_ops_overfreq = {
+	.set = set_overfreq,
+	.get = get_overfreq,
+};
+device_param_cb(overfreq, &param_ops_overfreq, NULL, 0644);
+/* Zuk overfreq---- end ---- */
+
 static int set_max_cpus(const char *buf, const struct kernel_param *kp)
 {
 	unsigned int i, ntokens = 0;
