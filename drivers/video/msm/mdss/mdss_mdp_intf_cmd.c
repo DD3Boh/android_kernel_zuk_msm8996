@@ -992,6 +992,28 @@ static void mdss_mdp_cmd_readptr_done(void *arg)
 	spin_unlock(&ctx->clk_lock);
 }
 
+static void mdss_mdp_cmd_lineptr_done(void *arg)		
+{		
+	struct mdss_mdp_ctl *ctl = arg;		
+	struct mdss_mdp_cmd_ctx *ctx = ctl->intf_ctx[MASTER_CTX];		
+	struct mdss_mdp_lineptr_handler *tmp;		
+	ktime_t lineptr_time;		
+		
+	if (!ctx) {		
+		pr_err("invalid ctx\n");		
+		return;		
+	}		
+		
+	lineptr_time = ktime_get();		
+	pr_debug("intr lineptr_time=%lld\n", ktime_to_ms(lineptr_time));		
+		
+	spin_lock(&ctx->clk_lock);		
+	list_for_each_entry(tmp, &ctx->lineptr_handlers, list) {		
+		if (tmp->enabled)		
+			tmp->lineptr_handler(ctl, lineptr_time);		
+	}		
+	spin_unlock(&ctx->clk_lock);		
+}
 
 static int mdss_mdp_cmd_intf_recovery(void *data, int event)
 {
