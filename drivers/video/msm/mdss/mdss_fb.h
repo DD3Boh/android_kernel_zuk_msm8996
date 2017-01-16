@@ -53,6 +53,9 @@
 #ifndef MIN
 #define  MIN(x, y) (((x) < (y)) ? (x) : (y))
 #endif
+#ifdef CONFIG_PRODUCT_Z2_X
+#define CONFIG_BACKLIGHT_LM36923
+#endif
 
 #define MDP_PP_AD_BL_LINEAR	0x0
 #define MDP_PP_AD_BL_LINEAR_INV	0x1

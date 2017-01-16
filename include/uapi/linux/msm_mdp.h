@@ -68,6 +68,8 @@
 #define MSMFB_OVERLAY_PREPARE		_IOWR(MSMFB_IOCTL_MAGIC, 169, \
 						struct mdp_overlay_list)
 #define MSMFB_LPM_ENABLE	_IOWR(MSMFB_IOCTL_MAGIC, 170, unsigned int)
+#define MSMFB_PANEL_EFFECT				_IOW(MSMFB_IOCTL_MAGIC, 180, struct hal_panel_ctrl_data)
+
 #define MSMFB_MDP_PP_GET_FEATURE_VERSION _IOWR(MSMFB_IOCTL_MAGIC, 171, \
 					      struct mdp_pp_feature_version)
 
@@ -1276,6 +1278,48 @@ struct msmfb_metadata {
 	} data;
 };
 
+#define EFFECT_COUNT 16
+#define MODE_COUNT  8
+#define NAME_SIZE 16
+
+typedef enum {
+	GET_EFFECT_NUM = 1,
+	GET_EFFECT_LEVEL,
+	GET_EFFECT,
+	GET_MODE_NUM,
+	GET_MODE,
+	SET_EFFECT,
+	SET_MODE,
+	SET_BL_LEVEL,
+	GET_BL_LEVEL,
+} ctrl_id;
+
+struct hal_lcd_effect {
+	char name[NAME_SIZE];
+	int max_level;
+	int level;
+};
+
+struct hal_lcd_mode {
+	char name[NAME_SIZE];
+};
+
+struct hal_panel_data {
+	struct hal_lcd_effect effect[EFFECT_COUNT];
+	struct hal_lcd_mode mode[MODE_COUNT];
+	int effect_cnt;
+	int mode_cnt;
+	int current_mode;
+};
+
+struct hal_panel_ctrl_data {
+	struct hal_panel_data panel_data;
+	int level;
+	int mode;
+	int index;
+	ctrl_id id;
+};
+
 #define MDP_MAX_FENCE_FD	32
 #define MDP_BUF_SYNC_FLAG_WAIT	1
 #define MDP_BUF_SYNC_FLAG_RETIRE_FENCE	0x10
@@ -1368,20 +1412,11 @@ enum {
 	MDP_WRITEBACK_MIRROR_RESUME,
 };
 
-/*
- * The enum values are continued below as preprocessor macro definitions
- */
 enum mdp_color_space {
 	MDP_CSC_ITU_R_601,
 	MDP_CSC_ITU_R_601_FR,
 	MDP_CSC_ITU_R_709,
 };
-
-/*
- * These definitions are a continuation of the mdp_color_space enum above
- */
-#define MDP_CSC_ITU_R_2020	(MDP_CSC_ITU_R_709 + 1)
-#define MDP_CSC_ITU_R_2020_FR	(MDP_CSC_ITU_R_2020 + 1)
 
 enum {
 	mdp_igc_v1_7 = 1,

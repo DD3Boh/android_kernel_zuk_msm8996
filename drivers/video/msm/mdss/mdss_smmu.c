@@ -329,7 +329,7 @@ static void mdss_smmu_unmap_dma_buf_v2(struct sg_table *table, int domain,
  * bank device
  */
 static int mdss_smmu_dma_alloc_coherent_v2(struct device *dev, size_t size,
-		dma_addr_t *phys, dma_addr_t *iova, void **cpu_addr,
+		dma_addr_t *phys, dma_addr_t *iova, void *cpu_addr,
 		gfp_t gfp, int domain)
 {
 	struct mdss_smmu_client *mdss_smmu = mdss_smmu_get_cb(domain);
@@ -338,8 +338,8 @@ static int mdss_smmu_dma_alloc_coherent_v2(struct device *dev, size_t size,
 		return -EINVAL;
 	}
 
-	*cpu_addr = dma_alloc_coherent(mdss_smmu->dev, size, iova, gfp);
-	if (!*cpu_addr) {
+	cpu_addr = dma_alloc_coherent(mdss_smmu->dev, size, iova, gfp);
+	if (!cpu_addr) {
 		pr_err("dma alloc coherent failed!\n");
 		return -ENOMEM;
 	}
@@ -539,13 +539,13 @@ int mdss_smmu_init(struct mdss_data_type *mdata, struct device *dev)
 }
 
 static struct mdss_smmu_domain mdss_mdp_unsec = {
-	"mdp_0", MDSS_IOMMU_DOMAIN_UNSECURE, SZ_1M, (SZ_4G - SZ_1M)};
+	"mdp_0", MDSS_IOMMU_DOMAIN_UNSECURE, SZ_128K, (SZ_4G - SZ_128K)};
 static struct mdss_smmu_domain mdss_rot_unsec = {
-	NULL, MDSS_IOMMU_DOMAIN_ROT_UNSECURE, SZ_1M, (SZ_4G - SZ_1M)};
+	NULL, MDSS_IOMMU_DOMAIN_ROT_UNSECURE, SZ_128K, (SZ_4G - SZ_128K)};
 static struct mdss_smmu_domain mdss_mdp_sec = {
-	"mdp_1", MDSS_IOMMU_DOMAIN_SECURE, SZ_1M, (SZ_4G - SZ_1M)};
+	"mdp_1", MDSS_IOMMU_DOMAIN_SECURE, SZ_128K, (SZ_4G - SZ_128K)};
 static struct mdss_smmu_domain mdss_rot_sec = {
-	NULL, MDSS_IOMMU_DOMAIN_ROT_SECURE, SZ_1M, (SZ_4G - SZ_1M)};
+	NULL, MDSS_IOMMU_DOMAIN_ROT_SECURE, SZ_128K, (SZ_4G - SZ_128K)};
 
 static const struct of_device_id mdss_smmu_dt_match[] = {
 	{ .compatible = "qcom,smmu_mdp_unsec", .data = &mdss_mdp_unsec},

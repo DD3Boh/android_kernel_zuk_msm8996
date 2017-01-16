@@ -26,6 +26,68 @@
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
 
+#include <linux/irq.h>
+#include <linux/gpio.h>
+#include <linux/workqueue.h>
+#include <linux/time.h>
+
+#include <linux/fs.h>
+#include <linux/string.h>
+#include <asm/uaccess.h>
+#include "mdss_dsi.h"
+#include "mdss_fb.h"
+#include "mdss_ams520.h"
+#include "mdss_otm1901a.h"
+#include "mdss_ft8716.h"
+
+
+#include <linux/init.h>
+#include <linux/i2c.h>
+#include <linux/slab.h>
+#include <linux/gpio.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+#include <linux/regulator/consumer.h>
+
+struct panel_effect_data lcd_data;
+
+int is_show_lcd_param = 0;
+extern struct msm_fb_data_type *mfd_priv;
+
+#ifdef ESD_FOR_LCD
+extern struct timer_list te_timer;
+extern int te_running;
+static int current_level = 0;
+#endif
+
+#ifdef CONFIG_BACKLIGHT_LM36923
+static bool lowestbklt = 0;
+static struct i2c_client *lm36923_client = NULL;
+static int lm36923_2c_transfer ( struct i2c_client * client );
+static int lm36923_set_lowestbklt( bool lowestbklt );
+#endif
+
+int show_lcd_param(struct dsi_cmd_desc *cmds, int cmd_cnt)
+{
+	int i, j;
+
+	printk("======================================= cmds_cnt %d =========================================\n", cmd_cnt);
+	for (i = 0; i < cmd_cnt; i++) {
+		printk("%2x %2x %2x %2x %2x %2x ", cmds[i].dchdr.dtype,
+				cmds[i].dchdr.last,
+				cmds[i].dchdr.vc,
+				cmds[i].dchdr.ack,
+				cmds[i].dchdr.wait,
+				cmds[i].dchdr.dlen);
+		for (j = 0; j < cmds[i].dchdr.dlen; j++) {
+			printk("%2x ", cmds[i].payload[j]);
+		}
+		printk("\n");
+	}
+	pr_debug("===========================================================================================\n");
+	return 0;
+}
+
 #define DT_CMD_HDR 6
 #define MIN_REFRESH_RATE 48
 #define DEFAULT_MDP_TRANSFER_TIME 14000
@@ -218,7 +280,265 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	cmdreq.cb = NULL;
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+#ifdef CONFIG_BACKLIGHT_LM36923
+		//static bool lowestbklt = 0;
+		if(level == 1){
+			lowestbklt = 1;
+			lm36923_set_lowestbklt(lowestbklt);
+		}
+		if(lowestbklt && (level != 1)){
+			lowestbklt = 0;
+			lm36923_set_lowestbklt(lowestbklt);
+		}
+#endif
+
 }
+
+
+//add function to read/write lcd register value by sys,need use when panel on
+#define RW_LCD_REGISTER
+
+#ifdef RW_LCD_REGISTER
+static int lcd_register_rwlen=2;
+static int lcd_register_id=0;
+static int lcd_register_value=0;
+static char lcd_register[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	/* DTYPE_DCS_WRITE1 */
+static struct mdss_dsi_ctrl_pdata *registerctrl;
+static struct dsi_cmd_desc write_register_cmd = {
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 1, 2},
+	lcd_register
+};
+static struct dsi_cmd_desc read_register_cmd = {
+	{DTYPE_GEN_READ, 1, 0, 1, 5, 2},
+	lcd_register
+};
+
+static int mdss_dsi_read_register(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct dcs_cmd_req cmdreq;
+	int i = 0;
+
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = &read_register_cmd;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
+	cmdreq.rlen = 2;//ctrl->status_cmds_rlen;
+	cmdreq.cb = NULL;
+
+	if(ctrl && ctrl->panel_data.panel_info.panel_power_state) {
+		cmdreq.rbuf = ctrl->status_buf.data;
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		printk("%s: LCD register 0x%02x value:\n", __func__,lcd_register_id);
+		for(i=0; i<lcd_register_rwlen; i++){
+			printk("0x%02x ", ctrl->status_buf.data[i]);
+		}
+		printk("\n");
+		return ctrl->status_buf.data[0];
+	} else {
+		pr_err("%s: LCD panel have powered off\n", __func__);
+		return -1;
+	}
+}
+void mdss_dsi_write_register(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct dcs_cmd_req cmdreq;
+
+	//pr_err(KERN_ERR"%s,ndx=%d \n", __func__,ctrl->ndx);
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = &write_register_cmd;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
+	cmdreq.rlen = 0;
+	cmdreq.cb = NULL;
+
+	if(ctrl && ctrl->panel_data.panel_info.panel_power_state)
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	else
+		pr_err("%s: LCD panel have powered off\n", __func__);
+
+}
+
+static int set_lcd_register_rwlen_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_register_rwlen = *((int*)kp->arg);
+	if(lcd_register_rwlen > sizeof(lcd_register)){
+		printk("%s register read write max length is %d\n", __func__,(int)sizeof(lcd_register));
+		lcd_register_rwlen = 2;
+		return 0;
+		}
+	write_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+	read_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+
+	printk("%s register read write length is:%d\n", __func__,lcd_register_rwlen);
+	return 0;
+}
+
+static int get_lcd_register_rwlen_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_register_rwlen);
+	printk("%s register read write leagth is:0x%02x\n", __func__,lcd_register_rwlen);
+	return ret;
+}
+
+static int set_lcd_register_id_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_register_id = *((int*)kp->arg);
+	lcd_register[0]=lcd_register_id;
+
+	printk("%s register id is:%d\n", __func__,lcd_register_id);
+	return 0;
+}
+
+static int get_lcd_register_id_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_register_id);
+	printk("%s register id is:0x%02x\n", __func__,lcd_register_id);
+	return ret;
+}
+
+static int set_lcd_register_value_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_ulong(val, kp);
+	int i = 0;
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+
+	lcd_register_value = *((int*)kp->arg);
+	printk("%s register value is:0x%08x ", __func__,lcd_register_value);
+	for(i=0; i<lcd_register_rwlen; i++){
+		lcd_register[i] = (lcd_register_value >> (lcd_register_rwlen - 1 - i)*8);
+		printk("0x%02x ", lcd_register[i]);
+	}
+	printk("\n");
+	mdss_dsi_write_register(registerctrl);
+
+	for(i=0; i<sizeof(lcd_register); i++)//8 need change with length
+		lcd_register[i] = 0x00;
+	lcd_register_rwlen = 2;
+	write_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+	read_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+
+	return 0;
+}
+
+static int get_lcd_register_value_func(char *val, struct kernel_param *kp)
+{
+	int ret=0;
+
+	lcd_register_value = mdss_dsi_read_register(registerctrl);
+
+	ret=sprintf(val, "0x%02x\n", lcd_register_value);
+	pr_err(KERN_ERR"%s register value is:0x%02x\n", __func__,lcd_register_value);
+	//pr_err(KERN_ERR"%s register value 2 is:0x%02x\n", __func__,registerctrl->status_buf.data[1]);
+	return ret;
+}
+
+module_param_call(lcdrwlen, set_lcd_register_rwlen_func,get_lcd_register_rwlen_func, &lcd_register_rwlen, S_IRUSR | S_IWUSR);
+module_param_call(lcdid, set_lcd_register_id_func,get_lcd_register_id_func, &lcd_register_id, S_IRUSR | S_IWUSR);
+module_param_call(lcdvalue, set_lcd_register_value_func,get_lcd_register_value_func, &lcd_register_value, S_IRUSR | S_IWUSR);
+
+#ifdef CONFIG_PRODUCT_Z2_PLUS
+static int set_z2_plus_lcd_overturn_func(struct mdss_dsi_ctrl_pdata *ctrl,int lcd_overturn)
+{
+	struct dcs_cmd_req cmdreq;
+
+	char lcd_command2_page1[]={0x00,0x00};
+	char lcd_command2_enable1[]={0xFF,0x19,0x01,0x01};
+	char lcd_command2_page2[]={0x00,0x80};
+	char lcd_command2_enable2[]={0xFF,0x19,0x01};
+
+	char lcd_command2_disable2[]={0xFF,0x00,0x00,0x00};
+	char lcd_overturn_cmd0[2]={0x00,0xb4};
+	char lcd_overturn_cmd1[2]={0xc0,0xd0};
+	char lcd_overturn_cmd2[2]={0x00,0x00};
+	char lcd_overturn_cmd3[2]={0xFB,0x01};
+
+	struct dsi_cmd_desc lcd_overturn_cmd[] = {
+		//command2 enable
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 2},lcd_command2_page1},
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 4},lcd_command2_enable1},
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 2},lcd_command2_page2},
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 3},lcd_command2_enable2},
+
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 2},lcd_overturn_cmd0},
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 2},lcd_overturn_cmd1},
+		{{DTYPE_GEN_LWRITE, 0, 0, 0, 0, 2},lcd_overturn_cmd2},
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, 0, 2},lcd_overturn_cmd3},
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, 0, 2},lcd_command2_page1},
+		{{DTYPE_GEN_LWRITE, 1, 0, 0, 0, 4},lcd_command2_disable2},
+
+	};
+	if(!lcd_overturn)
+		lcd_overturn_cmd[5].payload[1] = 0x80;
+
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = lcd_overturn_cmd;
+	cmdreq.cmds_cnt = sizeof(lcd_overturn_cmd)/sizeof(struct dsi_cmd_desc);
+	cmdreq.flags = CMD_REQ_COMMIT |CMD_REQ_LP_MODE;
+	cmdreq.rlen = 0;
+	cmdreq.cb = NULL;
+
+	if(ctrl && ctrl->panel_data.panel_info.panel_power_state)
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	else
+		pr_err("%s: LCD panel have powered off\n", __func__);
+
+	return 0;
+}
+#endif
+
+static int lcd_overturn = 0;
+static int get_lcd_overturn_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_overturn);
+	pr_err(KERN_ERR"%s lcd_overturn is:0x%02x\n", __func__,lcd_overturn);
+	return ret;
+}
+
+static int set_lcd_overturn_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_overturn = *((int*)kp->arg);
+#ifdef CONFIG_PRODUCT_Z2_PLUS
+	set_z2_plus_lcd_overturn_func(registerctrl,lcd_overturn);
+#else
+	lcd_register[0]=0x36;
+	if(lcd_overturn)
+		lcd_register[1]=0xc0;
+	else
+		lcd_register[1]=0x0;
+
+	mdss_dsi_write_register(registerctrl);
+
+#endif
+	pr_err(KERN_ERR"%s lcdoverturn is:%d\n", __func__,lcd_overturn);
+	return 0;
+}
+module_param_call(lcdoverturn, set_lcd_overturn_func,get_lcd_overturn_func, &lcd_overturn, S_IRUSR | S_IWUSR);
+#endif
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -233,6 +553,7 @@ static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 			goto disp_en_gpio_err;
 		}
 	}
+
 	rc = gpio_request(ctrl_pdata->rst_gpio, "disp_rst_n");
 	if (rc) {
 		pr_err("request reset gpio failed, rc=%d\n",
@@ -724,6 +1045,9 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
+#ifdef CONFIG_BACKLIGHT_LM36923
+    lm36923_2c_transfer ( lm36923_client );
+#endif
 
 	on_cmds = &ctrl->on_cmds;
 
@@ -731,12 +1055,15 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 			(pinfo->mipi.boot_mode != pinfo->mipi.mode))
 		on_cmds = &ctrl->post_dms_on_cmds;
 
-	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
+	pr_info("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
-
-	if (on_cmds->cmd_cnt)
-		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
-
+//#ifdef CONFIG_PRODUCT_Z2_x
+//	if (on_cmds->cmd_cnt)
+//		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
+//#else
+	if (1)
+		update_init_code(ctrl, &lcd_data, (void *)mdss_dsi_panel_cmds_send);
+//#endif
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
 
@@ -800,12 +1127,15 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	ctrl = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
-	pr_debug("%s: ctrl=%pK ndx=%d\n", __func__, ctrl, ctrl->ndx);
+	pr_info("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
 
 	if (pinfo->dcs_cmd_by_left) {
 		if (ctrl->ndx != DSI_CTRL_LEFT)
 			goto end;
 	}
+#ifdef CONFIG_PRODUCT_Z2_X
+	gpio_set_value((ctrl->bklt_en_gpio), 0);
+#endif
 
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds, CMD_REQ_COMMIT);
@@ -1113,58 +1443,6 @@ void mdss_dsi_panel_dsc_pps_send(struct mdss_dsi_ctrl_pdata *ctrl,
 	pcmds.link_state = DSI_LP_MODE;
 
 	mdss_dsi_panel_cmds_send(ctrl, &pcmds, CMD_REQ_COMMIT);
-}
-
-static int mdss_dsi_parse_hdr_settings(struct device_node *np,
-		struct mdss_panel_info *pinfo)
-{
-	int rc = 0;
-	struct mdss_panel_hdr_properties *hdr_prop;
-
-	if (!np) {
-		pr_err("%s: device node pointer is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	if (!pinfo) {
-		pr_err("%s: panel info is NULL\n", __func__);
-		return -EINVAL;
-	}
-
-	hdr_prop = &pinfo->hdr_properties;
-	hdr_prop->hdr_enabled = of_property_read_bool(np,
-		"qcom,mdss-dsi-panel-hdr-enabled");
-
-	if (hdr_prop->hdr_enabled) {
-		rc = of_property_read_u32_array(np,
-				"qcom,mdss-dsi-panel-hdr-color-primaries",
-				hdr_prop->display_primaries,
-				DISPLAY_PRIMARIES_COUNT);
-		if (rc) {
-			pr_info("%s:%d, Unable to read color primaries,rc:%u",
-					__func__, __LINE__,
-					hdr_prop->hdr_enabled = false);
-		}
-
-		rc = of_property_read_u32(np,
-			"qcom,mdss-dsi-panel-peak-brightness",
-			&(hdr_prop->peak_brightness));
-		if (rc) {
-			pr_info("%s:%d, Unable to read hdr brightness, rc:%u",
-				__func__, __LINE__, rc);
-			hdr_prop->hdr_enabled = false;
-		}
-
-		rc = of_property_read_u32(np,
-			"qcom,mdss-dsi-panel-blackness-level",
-			&(hdr_prop->blackness_level));
-		if (rc) {
-			pr_info("%s:%d, Unable to read hdr brightness, rc:%u",
-				__func__, __LINE__, rc);
-			hdr_prop->hdr_enabled = false;
-		}
-	}
-	return 0;
 }
 
 static int mdss_dsi_parse_dsc_version(struct device_node *np,
@@ -2256,12 +2534,28 @@ static int  mdss_dsi_panel_config_res_properties(struct device_node *np,
 		bool default_timing)
 {
 	int rc = 0;
+#ifdef CONFIG_PRODUCT_Z2_PLUS
+		lcd_data = lcd_otm1901a_data;
+#elif defined CONFIG_PRODUCT_Z2_X
+		lcd_data = lcd_ft8716_data;
+#else
+		lcd_data = lcd_ams520_data;
+#endif
 
 	mdss_dsi_parse_roi_alignment(np, pt);
 
-	mdss_dsi_parse_dcs_cmds(np, &pt->on_cmds,
+	rc = mdss_dsi_parse_dcs_cmds(np, &pt->on_cmds,
 		"qcom,mdss-dsi-on-command",
 		"qcom,mdss-dsi-on-command-state");
+	if (!rc) {
+		lcd_data.save_cmd.cmd = pt->on_cmds.cmds;
+		lcd_data.save_cmd.cnt = pt->on_cmds.cmd_cnt;
+		printk("%s init code cnt: %d\n", __func__, lcd_data.save_cmd.cnt);
+		rc = malloc_lcd_effect_code_buf(&lcd_data);
+		if (rc) {
+			printk("malloc_lcd_effect_code_buf failure\n");
+		}
+	}
 
 	mdss_dsi_parse_dcs_cmds(np, &pt->post_panel_on_cmds,
 		"qcom,mdss-dsi-post-panel-on-command", NULL);
@@ -2360,6 +2654,8 @@ exit:
 	return rc;
 }
 
+extern int is_testmode;
+
 static int mdss_panel_parse_dt(struct device_node *np,
 			struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -2425,6 +2721,10 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		else if (!strcmp(data, "vflip"))
 			pinfo->panel_orientation = MDP_FLIP_UD;
 	}
+#ifndef CONFIG_PRODUCT_Z2_X
+	if(is_testmode)
+		pinfo->panel_orientation = MDP_ROT_180;
+#endif
 
 	rc = of_property_read_u32(np, "qcom,mdss-brightness-max-level", &tmp);
 	pinfo->brightness_max = (!rc ? tmp : MDSS_MAX_BL_BRIGHTNESS);
@@ -2512,9 +2812,6 @@ static int mdss_panel_parse_dt(struct device_node *np,
 		"qcom,mdss-dsi-lane-3-state");
 
 	rc = mdss_panel_parse_display_timings(np, &ctrl_pdata->panel_data);
-	if (rc)
-		return rc;
-	rc = mdss_dsi_parse_hdr_settings(np, pinfo);
 	if (rc)
 		return rc;
 
@@ -2639,5 +2936,287 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
 
+#ifdef RW_LCD_REGISTER
+		registerctrl=ctrl_pdata;
+#endif
+
 	return 0;
 }
+
+#ifdef CONFIG_BACKLIGHT_LM36923
+static struct of_device_id lm36923_i2c_table [] = {
+    { . compatible = "ti,lm36923" ,}, // Compatible node must match dts
+    { },
+};
+
+static const struct i2c_device_id lm36923_id [] = {
+    { " lm36923_i2c ", 0 },
+    { }
+};
+
+static int lm36923_i2c_power_on( struct i2c_client * client)
+{
+	int ret=0;
+	struct regulator 	*vcc_i2c;
+	pr_err("%s \n",__func__);
+
+	vcc_i2c = regulator_get(&client->dev,"vcc_i2c");
+	if (IS_ERR(vcc_i2c)) {
+		dev_err(&client->dev,"%s: Failed to get i2c regulator\n",
+				__func__);
+		ret = PTR_ERR(vcc_i2c);
+		goto error_enable_i2c;
+	}
+
+	ret = regulator_enable(vcc_i2c);
+	if (ret) {
+		dev_err(&client->dev,
+			"%s-->Regulator vcc_i2c enable "
+			"failed rc=%d\n", __func__,ret);
+		goto error_enable_i2c;
+	}
+	return 0;
+
+error_enable_i2c:
+	vcc_i2c = NULL;
+	return ret;
+}
+
+int lm36923_sunlight_settings (int level)
+{
+	int ret = 0;
+	struct i2c_adapter *adapter = lm36923_client->adapter;
+    u8 strong_light[] = {0x19,0xff};
+    u8 strong_ctrl[] = {0x11,0x15};
+    u8 normal_light[] = {0x19,0xcc};
+    u8 normal_ctrl[] = {0x11,0x55};
+    struct i2c_msg stronglight[2] = {
+		{
+             .addr = lm36923_client->addr,
+             .flags = 0,
+             .len = 2,
+             .buf = strong_light,
+		},
+		{
+             .addr = lm36923_client->addr,
+             .flags = 0,
+             .len = 2,
+             .buf = strong_ctrl,
+		}
+
+    };
+    struct i2c_msg normallight[2] = {
+		{
+             .addr = lm36923_client->addr,
+             .flags = 0,
+             .len = 2,
+             .buf = normal_light,
+		},
+		{
+			 .addr = lm36923_client->addr,
+			 .flags = 0,
+			 .len = 2,
+			 .buf = normal_ctrl,
+		}
+    };
+
+	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+		return -ENODEV;
+	if(level == 1){
+		pr_debug("%s,enable lcd sunlight mode,level = %d\n",__func__,level);
+		ret = i2c_transfer(adapter, stronglight, 2);
+	}else{
+		if(lowestbklt == 1)
+			normal_light[1] = 0x4c;//should equal idvalue[1] in lm36923_set_lowestbklt()
+		pr_debug("%s,enable lcd normallight mode,level = %d\n",__func__,level);
+		ret = i2c_transfer(adapter, normallight, 2);
+	}
+    return ret;
+}
+
+static char lmread_register = 0x00;
+static int lm36923_set_lowestbklt( bool lowestbklt )
+{
+	char idvalue[] = {0x19,0xcc};
+	struct i2c_msg msgs[] = {
+		{
+			 .addr = lm36923_client->addr,
+			 .flags = 0,
+			 .len = 2,
+			 .buf = idvalue,
+		}
+	};
+	struct i2c_adapter *adapter = lm36923_client->adapter;
+	if(lowestbklt)
+		idvalue[1] = 0x4c;
+
+	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+		return -ENODEV;
+
+	pr_debug("%s,lowestbklt %d\n",__func__,lowestbklt);
+	return i2c_transfer(adapter, msgs, 1);
+}
+
+static int lm36923_set_register( int lmregister )
+{
+	char idvalue[] = {0x00,0x00};
+	struct i2c_msg msgs[] = {
+		{
+			 .addr = lm36923_client->addr,
+			 .flags = 0,
+			 .len = 2,
+			 .buf = idvalue,
+		}
+	};
+	struct i2c_adapter *adapter = lm36923_client->adapter;
+	idvalue[0] = (lmregister >> 8) & 0x00ff;;
+	idvalue[1] = lmregister & 0x00ff;
+	lmread_register = lmregister >> 16;//registerid to read
+
+	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+		return -ENODEV;
+
+	pr_debug("%s,lmregister = %04x\n",__func__,lmregister);
+	return i2c_transfer(adapter, msgs, 1);
+}
+static int lm36923_get_register( int registerid )
+{
+	char idvalue;
+	static char readid;
+	struct i2c_msg msgs[2];
+	int retries = 0;
+	int ret = 0;
+	readid = (char)registerid;
+
+    msgs[0].flags = !I2C_M_RD;
+    msgs[0].addr  = lm36923_client->addr;
+    msgs[0].len   = 1;
+    msgs[0].buf   = &readid;
+
+    msgs[1].flags = I2C_M_RD;
+    msgs[1].addr  = lm36923_client->addr;
+    msgs[1].len   = 1;
+    msgs[1].buf   = &idvalue;
+
+    while(retries < 2)
+    {
+        ret = i2c_transfer(lm36923_client->adapter, msgs, 2);
+        if(ret == 2)break;
+        retries++;
+    }
+	pr_debug("%s,registerid = %x,idvalue =%x\n",__func__,registerid,idvalue);
+	return idvalue;
+}
+
+static int set_lm36923_register_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+	static int register_value = 0;
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	register_value = *((int*)kp->arg);
+
+	lm36923_set_register(register_value);
+	pr_err(KERN_ERR"%s register value is:0x%04x\n", __func__,lcd_register_value);
+	return 0;
+}
+
+static int get_lm36923_register_func(char *val, struct kernel_param *kp)
+{
+	int ret=0;
+	int register_value =0;
+	register_value = lm36923_get_register(lmread_register);
+
+	ret=sprintf(val, "0x%02x\n", register_value);
+	pr_err(KERN_ERR"%s register 0x%02x value is:0x%02x\n",
+		__func__,lmread_register,register_value);
+	//pr_err(KERN_ERR"%s register value 2 is:0x%02x\n", __func__,registerctrl->status_buf.data[1]);
+	return ret;
+}
+
+module_param_call(lmregister, set_lm36923_register_func,get_lm36923_register_func, &lcd_register_value, S_IRUSR | S_IWUSR);
+
+static int lm36923_2c_transfer ( struct i2c_client * client )
+{
+    u8 swreset[] = {0x01,0x01};
+    u8 brightctrl[] = {0x11,0x55};
+    u8 pwmctrl[] = {0x12,0xa1};
+    u8 brightlsb[] = {0x18,0x00};
+    u8 brightmsb[] = {0x19,0xcc};
+    struct i2c_msg msgs[5] = {
+		{
+		 .addr = client->addr,
+		 .flags = 0,
+		 .len = 2,
+		 .buf = swreset,
+		},
+		{
+		 .addr = client->addr,
+		 .flags = 0,
+		 .len = 2,
+		 .buf = brightlsb,
+		},
+		{
+		 .addr = client->addr,
+		 .flags = 0,
+		 .len = 2,
+		 .buf = brightmsb,
+		},
+		{
+		  .addr = client->addr,
+		  .flags = 0,
+		  .len = 2,
+		  .buf = brightctrl,
+		},
+		{
+		  .addr = client->addr,
+		  .flags = 0,
+		  .len = 2,
+		  .buf = pwmctrl,
+		}
+    };
+	int msgnum = sizeof(msgs)/sizeof(struct i2c_msg);
+	struct i2c_adapter *adapter = client->adapter;
+
+	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA))
+		return -ENODEV;
+
+	pr_debug("%s,msgnum = %d\n",__func__,msgnum);
+    return i2c_transfer(adapter, msgs, msgnum);
+}
+
+static int lm36923_i2c_probe ( struct i2c_client *client ,const struct i2c_device_id *id)
+{
+    pr_info("%s write lm36923 register,client address:%lx\n",__func__,(long unsigned int)client);
+	lm36923_i2c_power_on(client);
+
+    lm36923_2c_transfer ( client );
+	lm36923_client = client;
+
+    return 0;
+}
+static int lm36923_i2c_remove(struct i2c_client *client)
+{
+	lm36923_client = NULL;
+	return 0;
+}
+
+static struct i2c_driver lm36923_i2c_driver = {
+    .driver = {
+    .name = " lm36923_i2c ",
+    .owner = THIS_MODULE ,
+    .of_match_table = lm36923_i2c_table ,
+    },
+    .probe = lm36923_i2c_probe ,
+    .remove = lm36923_i2c_remove ,
+    .id_table = lm36923_id ,
+};
+
+module_i2c_driver (lm36923_i2c_driver);
+MODULE_DESCRIPTION ("LM36923 I2C DRIVER");
+MODULE_AUTHOR("Li Yupan");
+MODULE_LICENSE ("GPL v2");
+#endif

@@ -320,7 +320,7 @@ static int mdss_mdp_cmd_tearcheck_cfg(struct mdss_mdp_mixer *mixer,
 		te ? te->wr_ptr_irq : 0);
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_START_POS,
-		te ? te->start_pos : 0);
+	te ? te->start_pos : 0);
 	mdss_mdp_pingpong_write(pingpong_base,
 		MDSS_MDP_REG_PP_SYNC_THRESH,
 		te ? ((te->sync_threshold_continue << 16) |
