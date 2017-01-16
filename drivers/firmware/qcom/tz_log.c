@@ -27,6 +27,8 @@
 #include <soc/qcom/scm.h>
 #include <soc/qcom/qseecomi.h>
 
+#define OFFLINE_LOG
+
 /* QSEE_LOG_BUF_SIZE = 32K */
 #define QSEE_LOG_BUF_SIZE 0x8000
 
@@ -547,6 +549,7 @@ static int _disp_log_stats(struct tzdbg_log_t *log,
 		log_start->offset = (log->log_pos.offset + 1) % log_len;
 	}
 
+#ifndef OFFLINE_LOG
 	while (log_start->offset == log->log_pos.offset) {
 		/*
 		 * No data in ring buffer,
@@ -561,8 +564,14 @@ static int _disp_log_stats(struct tzdbg_log_t *log,
 		if (buf_idx == TZDBG_LOG)
 			memcpy_fromio((void *)tzdbg.diag_buf, tzdbg.virt_iobase,
 						debug_rw_buf_size);
-
 	}
+#else
+
+	if (buf_idx == TZDBG_LOG)
+		memcpy_fromio((void *)tzdbg.diag_buf, tzdbg.virt_iobase,
+					debug_rw_buf_size);
+    if (log_start->offset == log->log_pos.offset) return 0;
+#endif
 
 	max_len = (count > debug_rw_buf_size) ? debug_rw_buf_size : count;
 
