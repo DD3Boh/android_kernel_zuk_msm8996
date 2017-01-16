@@ -34,7 +34,7 @@ static DEFINE_IDR(master_idr);
 static DEFINE_MUTEX(swr_lock);
 
 static struct device_type swr_dev_type;
-
+extern u64 wsa_dev_id;
 #define SOUNDWIRE_NAME_SIZE	32
 
 static void swr_master_put(struct swr_master *master)
@@ -499,6 +499,7 @@ int swr_get_logical_dev_num(struct swr_device *dev, u64 dev_id,
 		pr_err("%s: Error %d to get logical addr for device %llx\n",
 			__func__, ret, dev_id);
 	}
+	wsa_dev_id = dev_id;
 	mutex_unlock(&master->mlock);
 	return ret;
 }
