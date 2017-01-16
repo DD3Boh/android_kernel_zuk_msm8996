@@ -353,6 +353,14 @@ static int __init early_mem(char *p)
 }
 early_param("mem", early_mem);
 
+int is_testmode = 0;
+static int __init early_testmode(char *p)
+{
+	is_testmode = simple_strtoul(p,NULL,0);
+	return 0;
+}
+early_param("testmode",early_testmode);
+
 static void __init request_standard_resources(void)
 {
 	struct memblock_region *region;

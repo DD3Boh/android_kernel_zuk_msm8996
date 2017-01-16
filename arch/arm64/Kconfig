@@ -17,7 +17,6 @@ config ARM64
 	select AUDIT_ARCH_COMPAT_GENERIC
 	select ARM_GIC_V2M if PCI_MSI
 	select ARM_GIC_V3
-	select ARM_GIC_V3_ITS if PCI_MSI
 	select BUILDTIME_EXTABLE_SORT
 	select CLONE_BACKWARDS
 	select COMMON_CLK if !ARCH_MSM
@@ -340,6 +339,32 @@ config ARCH_MSM8994_V1_TLBI_WA
 	  operations with VA or ASID will not work.
 
 endmenu
+
+choice
+    bool "Product selection"
+    default PRODUCT_Z2_PLUS
+    help
+      select shenqi product
+
+config PRODUCT_Z2_PLUS
+    bool "z2_plus"
+    help
+	  This enables support for z2_plus product. If you don't
+	  know what to do here, say N
+
+config PRODUCT_Z2_ROW
+    bool "z2_row"
+    help
+	  This enables support for z2_row product. If you don't
+	  know what to do here, say N
+
+config PRODUCT_Z2_X
+    bool "z2_x"
+    help
+	  This enables support for z2_row product. If you don't
+	  know what to do here, say N
+
+endchoice
 
 menu "Bus support"
 
