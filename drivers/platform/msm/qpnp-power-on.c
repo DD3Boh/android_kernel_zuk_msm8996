@@ -758,6 +758,7 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	u8 pon_rt_sts = 0, pon_rt_bit = 0;
 	u32 key_status;
 
+	printk(KERN_INFO "%s(), pon_type=%d\n", __func__, pon_type);
 	cfg = qpnp_get_cfg(pon, pon_type);
 	if (!cfg)
 		return -EINVAL;
@@ -794,6 +795,7 @@ qpnp_pon_input_dispatch(struct qpnp_pon *pon, u32 pon_type)
 	pr_debug("PMIC input: code=%d, sts=0x%hhx\n",
 					cfg->key_code, pon_rt_sts);
 	key_status = pon_rt_sts & pon_rt_bit;
+	printk(KERN_INFO "%s(), cfg->key_code=%d,%d\n", __func__, cfg->key_code, key_status);
 
 	/* simulate press event in case release event occured
 	 * without a press event
@@ -816,6 +818,7 @@ static irqreturn_t qpnp_kpdpwr_irq(int irq, void *_pon)
 	int rc;
 	struct qpnp_pon *pon = _pon;
 
+	printk(KERN_INFO "%s(), irq=%d\n", __func__, irq);
 	rc = qpnp_pon_input_dispatch(pon, PON_KPDPWR);
 	if (rc)
 		dev_err(&pon->spmi->dev, "Unable to send input event\n");
@@ -825,6 +828,7 @@ static irqreturn_t qpnp_kpdpwr_irq(int irq, void *_pon)
 
 static irqreturn_t qpnp_kpdpwr_bark_irq(int irq, void *_pon)
 {
+	pr_info("kpdpwr bark irq is comming..\n");
 	return IRQ_HANDLED;
 }
 
@@ -841,6 +845,8 @@ static irqreturn_t qpnp_resin_irq(int irq, void *_pon)
 
 static irqreturn_t qpnp_kpdpwr_resin_bark_irq(int irq, void *_pon)
 {
+	pr_info("kpdpwr and resin bark irq is comming..\n");
+
 	return IRQ_HANDLED;
 }
 
@@ -1025,6 +1031,88 @@ qpnp_config_pull(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 
 	return rc;
 }
+
+/*
+set the emergent mode by press power key+vol down 7 seconds
+       S1 TIEMR: 6s
+       S2 TIMER: 1s
+       S2 CNTL : warm reset
+       S2 CNTL2: enable
+*/
+static int qpnp_config_emergent_restart(int on)
+{
+       struct qpnp_pon *pon = sys_reset_dev;
+       int rc = 0;
+
+       if (!pon) {
+               pr_err("%s:qpnp power-on driver is not initialized\n",__func__);
+               return -EPROBE_DEFER;
+       }
+
+       if(1 == on){
+		/* set the s1 timer 6s */
+		rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S1_TIMER(pon),
+                                       QPNP_PON_S1_TIMER_MASK, 0xE);
+               if (rc)
+			dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S1_TIMER(pon), rc);
+
+               /* set the s2 timer 1s */
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_TIMER(pon),
+                                       QPNP_PON_S2_TIMER_MASK, 6);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_TIMER(pon), rc);
+
+               /* set the cntl is warm restart */
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL(pon),
+                                       QPNP_PON_S2_CNTL_TYPE_MASK, 1);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL(pon), rc);
+
+               /* set the cntl2 is enable*/
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon),
+                                       QPNP_PON_S2_CNTL_EN, QPNP_PON_S2_CNTL_EN);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon), rc);
+       }else if (0 == on){
+               /* set the cntl2 is disable*/
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon),
+                                       QPNP_PON_S2_CNTL_EN, 0);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon), rc);
+       }
+       pr_info("%s: config emergent restart(%d)\n",__func__, on);
+       return rc;
+}
+
+extern int is_testmode;
+static int emergent_restart;
+static int emergent_restart_set(const char *val, struct kernel_param *kp)
+{
+	int ret;
+
+	ret = param_set_int(val, kp);
+
+	if (ret)
+		return ret;
+
+	if (!is_testmode)
+		qpnp_config_emergent_restart(emergent_restart&0x1);
+	else
+		pr_info("%s:in testmode, ignore this setting\n",__func__);
+
+	return 0;
+}
+module_param_call(emergent_restart, emergent_restart_set, param_get_int, &emergent_restart, 0644);
 
 static int
 qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
@@ -1927,6 +2015,19 @@ static int read_gen2_pon_off_reason(struct qpnp_pon *pon, u16 *reason,
 	return 0;
 }
 
+static void print_pmic_pon_register(struct qpnp_pon *pon)
+{
+	u8 pon_data[160];
+	int i,j=0;
+	//pr_info("%s: poweron registers:\n",__func__);
+
+	for (i=0x800; i<=0x880; i++,j++) {
+		spmi_ext_register_readl(pon->spmi->ctrl,pon->spmi->sid,i,&pon_data[j],1);
+	}
+	//print_hex_dump_bytes("poweron reg: ",DUMP_PREFIX_OFFSET,pon_data, 129);
+	print_hex_dump(KERN_INFO, "poweron reg: ", DUMP_PREFIX_OFFSET, 16, 1, pon_data, 128, true);
+};
+
 static int qpnp_pon_probe(struct spmi_device *spmi)
 {
 	struct qpnp_pon *pon;
@@ -2280,6 +2381,7 @@ static int qpnp_pon_probe(struct spmi_device *spmi)
 					"qcom,store-hard-reset-reason");
 
 	qpnp_pon_debugfs_init(spmi);
+	print_pmic_pon_register(pon);
 	return 0;
 }
 
