@@ -54,6 +54,7 @@
 #include "mdss_debug.h"
 #include "mdss_smmu.h"
 #include "mdss_mdp.h"
+#include "lcd_effect.h"
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -74,6 +75,9 @@
 #define BLANK_FLAG_LP	FB_BLANK_VSYNC_SUSPEND
 #define BLANK_FLAG_ULP	FB_BLANK_NORMAL
 #endif
+
+extern struct panel_effect_data lcd_data;
+struct msm_fb_data_type *mfd_priv;
 
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
@@ -782,6 +786,244 @@ static ssize_t mdss_fb_get_dfps_mode(struct device *dev,
 	return ret;
 }
 
+static ssize_t mdss_panel_set_type(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	unsigned long enable;
+
+	if (kstrtoul(buf, 0, &enable))
+		return -EINVAL;
+
+	if (enable) {
+		mdss_fb_blank_sub(FB_BLANK_UNBLANK, fbi, 1);
+	} else {
+		mdss_fb_blank_sub(FB_BLANK_POWERDOWN, fbi, 1);
+	}
+
+	return count;
+}
+
+static ssize_t mdss_get_panel_name(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret;
+#ifdef CONFIG_PRODUCT_Z2_PLUS
+	ret = snprintf(buf, PAGE_SIZE, "OTM1901A_FOCALTECH_1920_1080_4.97\n");
+#else //z2row
+	ret = snprintf(buf, PAGE_SIZE, "AMS520_MAGNA_1920_1080_5.2\n");
+#endif
+	return ret;
+}
+
+static ssize_t mdss_panel_get_ce(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	ret = get_effect_index_by_name("ce", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", lcd_data.effect_data->effect[ret].level);
+	return ret;
+}
+static ssize_t mdss_panel_get_ct(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	ret = get_effect_index_by_name("ct", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", lcd_data.effect_data->effect[ret].level);
+	return ret;
+}
+
+static ssize_t mdss_panel_get_cabc(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	ret = get_effect_index_by_name("cabc", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", lcd_data.effect_data->effect[ret].level);
+	return ret;
+}
+
+static ssize_t mdss_panel_set_cabc(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct hal_panel_ctrl_data ctrl;
+	unsigned long level;
+	int ret;
+
+	if (kstrtoul(buf, 0, &level))
+		return -EINVAL;
+	ret = get_effect_index_by_name("cabc", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+	ctrl.index = ret;
+	ctrl.level = level;
+	ctrl.id = SET_EFFECT;
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &ctrl);
+
+	return count;
+}
+
+static ssize_t mdss_panel_set_ce(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct hal_panel_ctrl_data ctrl;
+	unsigned long level;
+	int ret;
+
+	if (kstrtoul(buf, 0, &level))
+		return -EINVAL;
+
+	ret = get_effect_index_by_name("ce", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+	ctrl.id = SET_EFFECT;
+	ctrl.index = ret;
+	ctrl.level = level;
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &ctrl);
+
+	return count;
+}
+
+static ssize_t mdss_panel_set_ct(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct hal_panel_ctrl_data ctrl;
+	unsigned long level;
+	int ret;
+
+	if (kstrtoul(buf, 0, &level))
+		return -EINVAL;
+
+	ret = get_effect_index_by_name("ct", &lcd_data);
+	if (ret < 0) {
+		return -EINVAL;
+	}
+	ctrl.id = SET_EFFECT;
+	ctrl.index = ret;
+	ctrl.level = level;
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &ctrl);
+
+	return count;
+}
+
+static ssize_t mdss_panel_set_effect(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct hal_panel_ctrl_data ctrl;
+	unsigned long data;
+	int index, level, ret;
+
+	if (kstrtoul(buf, 0, &data))
+		return -EINVAL;
+
+	index = (data >> 4) & 0xf;
+	level = data & 0xf;
+	if (index > lcd_data.effect_data->supported_effect)
+		return -EINVAL;
+
+	ctrl.id = SET_EFFECT;
+	ctrl.level = level;
+	ctrl.index = index;
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &ctrl);
+
+	return count;
+}
+
+static ssize_t mdss_panel_get_effect(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	unsigned long index;
+
+	if (kstrtoul(buf, 0, &index))
+		return -EINVAL;
+
+	if (index > lcd_data.effect_data->supported_effect)
+		return -EINVAL;
+
+	return lcd_data.effect_data->effect[index].level;
+}
+
+static ssize_t mdss_panel_set_mode(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct hal_panel_ctrl_data ctrl;
+	unsigned long index;
+	int ret;
+
+	if (kstrtoul(buf, 0, &index))
+		return -EINVAL;
+
+	if (index > lcd_data.mode_data->supported_mode)
+		return -EINVAL;
+
+	ctrl.id = SET_MODE;
+	ctrl.mode = index;
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &ctrl);
+
+	return count;
+}
+
+
+static ssize_t mdss_panel_get_mode(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	int index = lcd_data.mode_data->current_mode;
+
+	ret = snprintf(buf, PAGE_SIZE, "%s\n", lcd_data.mode_data->mode[index].name);
+
+	return ret;
+}
+static ssize_t mdss_get_lcd_supported_effect(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	int i;
+
+	for (i = 0; i < lcd_data.effect_data->supported_effect; i++) {
+		ret += snprintf(buf + ret, PAGE_SIZE, "%s\n", lcd_data.effect_data->effect[i].name);
+	}
+
+	return ret;
+}
+
+static ssize_t mdss_get_lcd_supported_mode(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	ssize_t ret = 0;
+	int i;
+
+	for (i = 0; i < lcd_data.mode_data->supported_mode; i++) {
+		ret += snprintf(buf + ret, PAGE_SIZE, "%s\n", lcd_data.mode_data->mode[i].name);
+	}
+
+	return ret;
+}
+
+static DEVICE_ATTR(msm_panel_ctrl, S_IRUGO | S_IWUSR | S_IWGRP, NULL, mdss_panel_set_type);
+static DEVICE_ATTR(lcd_name, S_IRUGO | S_IWUSR | S_IWGRP,  mdss_get_panel_name, NULL);
+static DEVICE_ATTR(ce_onoff, S_IRUGO | S_IWUSR | S_IWGRP, mdss_panel_get_ce, mdss_panel_set_ce);
+static DEVICE_ATTR(ct_onoff, S_IRUGO | S_IWUSR | S_IWGRP, mdss_panel_get_ct, mdss_panel_set_ct);
+static DEVICE_ATTR(cabc_onoff, S_IRUGO | S_IWUSR | S_IWGRP, mdss_panel_get_cabc, mdss_panel_set_cabc);
+static DEVICE_ATTR(lcd_effect, S_IRUGO | S_IWUSR | S_IWGRP, mdss_panel_get_effect, mdss_panel_set_effect);
+static DEVICE_ATTR(lcd_mode, S_IRUGO | S_IWUSR | S_IWGRP, mdss_panel_get_mode, mdss_panel_set_mode);
+static DEVICE_ATTR(lcd_supported_effect, S_IRUGO | S_IWUSR | S_IWGRP, mdss_get_lcd_supported_effect, NULL);
+static DEVICE_ATTR(lcd_supported_mode, S_IRUGO | S_IWUSR | S_IWGRP, mdss_get_lcd_supported_mode, NULL);
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, mdss_fb_get_type, NULL);
 static DEVICE_ATTR(msm_fb_split, S_IRUGO | S_IWUSR, mdss_fb_show_split,
 					mdss_fb_store_split);
@@ -809,6 +1051,15 @@ static struct attribute *mdss_fb_attrs[] = {
 	&dev_attr_msm_fb_thermal_level.attr,
 	&dev_attr_msm_fb_panel_status.attr,
 	&dev_attr_msm_fb_dfps_mode.attr,
+	&dev_attr_msm_panel_ctrl.attr,
+	&dev_attr_lcd_name.attr,
+	&dev_attr_ce_onoff.attr,
+	&dev_attr_ct_onoff.attr,
+	&dev_attr_cabc_onoff.attr,
+	&dev_attr_lcd_supported_effect.attr,
+	&dev_attr_lcd_supported_mode.attr,
+	&dev_attr_lcd_effect.attr,
+	&dev_attr_lcd_mode.attr,
 	NULL,
 };
 
@@ -1139,6 +1390,9 @@ static int mdss_fb_probe(struct platform_device *pdev)
 	mfd->unset_bl_level = U32_MAX;
 
 	mfd->pdev = pdev;
+	//if broadcast mode = 1, then use index = 1 mfd else use index = 0
+	if (mfd->index == 1)
+		mfd_priv = mfd;
 
 	mfd->split_fb_left = mfd->split_fb_right = 0;
 
@@ -1936,6 +2190,7 @@ static int mdss_fb_blank(int blank_mode, struct fb_info *info)
 		return 0;
 	}
 	pr_debug("mode: %d\n", blank_mode);
+	ret = mdss_fb_blank_sub(blank_mode, info, mfd->op_enable);
 
 	pdata = dev_get_platdata(&mfd->pdev->dev);
 
@@ -4325,6 +4580,28 @@ err:
 	return ret;
 }
 
+static int mdss_fb_panel_effect(struct msm_fb_data_type *mfd,
+						unsigned long *argp)
+{
+	int ret, rc;
+	struct hal_panel_ctrl_data data;
+	ret = copy_from_user(&data, argp,
+			sizeof(data));
+	if (ret) {
+		pr_err("%s:copy_from_user failed", __func__);
+		return ret;
+	}
+
+	ret = handle_lcd_effect_data(mfd, &lcd_data, &data);
+	rc = copy_to_user(argp, &data, sizeof(data));
+	if (rc) {
+		pr_err("%s:copy_to_user failed", __func__);
+		return rc;
+	}
+
+	return ret;
+}
+
 static int mdss_fb_atomic_commit_ioctl(struct fb_info *info,
 	unsigned long *argp, struct file *file)
 {
@@ -4643,6 +4920,10 @@ int mdss_fb_do_ioctl(struct fb_info *info, unsigned int cmd,
 
 	case MSMFB_DISPLAY_COMMIT:
 		ret = mdss_fb_display_commit(info, argp);
+		break;
+
+	case MSMFB_PANEL_EFFECT:
+		ret = mdss_fb_panel_effect(mfd, argp);
 		break;
 
 	case MSMFB_LPM_ENABLE:
