@@ -12,6 +12,7 @@
 
 #include "skeleton64.dtsi"
 #include <dt-bindings/clock/msm-clocks-8996.h>
+#include <generated/autoconf.h>
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM 8996";
@@ -35,10 +36,15 @@
 		pci-domain0 = &pcie0;
 		pci-domain1 = &pcie1;
 		pci-domain2 = &pcie2;
+		i2c1 = &i2c_1;
 		i2c6 = &i2c_6;
 		i2c7 = &i2c_7;
 		i2c8 = &i2c_8;
-		i2c12 = &i2c_12;
+		i2c9 = &i2c_9;
+		/*i2c12 = &i2c_12;*/
+#if defined CONFIG_PRODUCT_Z2_ROW || defined CONFIG_PRODUCT_Z2_X
+		i2c5 = &i2c_5;
+#endif
 		spi0 = &spi_0;
 	};
 
@@ -344,6 +350,30 @@
 		pinctrl-1 = <&i2c_12_sleep>;
 	};
 
+#if defined CONFIG_PRODUCT_Z2_ROW || defined CONFIG_PRODUCT_Z2_X
+	i2c_5: i2c@7579000 { /* BLSP1 QUP5 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x7579000 0x1000>;//ok
+		interrupt-names = "qup_irq";//ok
+		interrupts = <0 99 0>;//ok
+		dmas = <&dma_blsp1 20 32 0x20000020 0x20>,//?
+			<&dma_blsp1 21 32 0x20000020 0x20>;//?
+		dma-names = "tx", "rx";
+		qcom,master-id = <86>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp1_qup5_i2c_apps_clk>;//
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_5_active>;
+		pinctrl-1 = <&i2c_5_sleep>;
+	};
+
+#endif
 
 	dma_blsp1: qcom,sps-dma@0x7544000{ /* BLSP1 */
 		#dma-cells = <4>;
@@ -359,6 +389,28 @@
 		reg = <0x7584000 0x2b000>;
 		interrupts = <0 239 0>;
 		qcom,summing-threshold = <0x10>;
+	};
+
+	i2c_1: i2c@7575000 {/* BLSP1 QUP1 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x7575000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 95 0>;
+		dmas = <&dma_blsp1 12 32 0x20000020 0x20>,
+			<&dma_blsp1 13 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,master-id = <86>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_1_active>;
+		pinctrl-1 = <&i2c_1_sleep>;
 	};
 
 	i2c_6: i2c@757a000 { /* BLSP1 QUP6 */
@@ -425,6 +477,29 @@
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&i2c_8_active>;
 		pinctrl-1 = <&i2c_8_sleep>;
+	};
+
+	i2c_9: i2c@75b7000 { /* BLSP2 QUP2 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x75b7000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 103 0>;
+		dmas = <&dma_blsp2 16 32 0x20000020 0x20>,
+			<&dma_blsp2 17 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,disable-dma;
+		qcom,master-id = <84>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp2_qup3_i2c_apps_clk>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_9_active>;
+		pinctrl-1 = <&i2c_9_sleep>;
 	};
 
 	blsp1_uart2: uart@07570000 { /* BLSP1 UART2 */
@@ -1752,7 +1827,7 @@
 		reg-names = "wdt-base";
 		interrupts = <0 28 0>, <0 29 0>;
 		qcom,bark-time = <11000>;
-		qcom,pet-time = <10000>;
+		qcom,pet-time = <8000>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
 	};
@@ -1891,7 +1966,8 @@
 		interrupt-names = "hs_phy_irq", "ss_phy_irq", "pwr_event_irq";
 
 		USB3_GDSC-supply = <&gdsc_usb30>;
-		vbus_dwc3-supply = <&smbcharger_charger_otg>;
+		//vbus_dwc3-supply = <&smbcharger_charger_otg>;
+		//vbus_dwc3-supply = <&usb_otg_switch>;
 		qcom,usb-dbm = <&dbm_1p5>;
 		qcom,msm-bus,name = "usb3";
 		qcom,msm-bus,num-cases = <2>;
@@ -1920,6 +1996,9 @@
 			interrupt-parent = <&intc>;
 			interrupts = <0 131 0>;
 			usb-phy = <&qusb_phy0>, <&ssphy>;
+#ifdef CONFIG_PRODUCT_Z2_PLUS
+			maximum-speed = "high-speed";
+#endif
 			tx-fifo-resize;
 			snps,usb3-u1u2-disable;
 			snps,nominal-elastic-buffer;
@@ -2057,10 +2136,10 @@
 		qcom,tune2-efuse-bit-pos = <21>;
 		qcom,tune2-efuse-num-bits = <4>;
 		qcom,enable-dpdm-pulsing;
-		qcom,qusb-phy-init-seq = <0xF8 0x80
-					0xB3 0x84
+		qcom,qusb-phy-init-seq = <0xf8 0x80
+					0x03 0x84
 					0x83 0x88
-					0xC0 0x8C
+					0xCf 0x8C
 					0x30 0x08
 					0x79 0x0C
 					0x21 0x10
@@ -2122,6 +2201,9 @@
 		vdda18-supply = <&pm8994_l12>;
 		qcom,vdd-voltage-level = <0 925000 925000>;
 		qcom,vbus-valid-override;
+		qcom,phy-tuning-seq = <0x3f 0x218
+                                       0x7  0x21c
+                                       0x3f 0x220>;
 
 		clocks = <&clock_gcc clk_gcc_usb3_phy_aux_clk>,
 			 <&clock_gcc clk_gcc_usb3_phy_pipe_clk>,
@@ -2789,7 +2871,7 @@
 
 	qcom,bcl {
 		compatible = "qcom,bcl";
-		qcom,bcl-enable;
+		#qcom,bcl-enable;
 		qcom,bcl-framework-interface;
 		qcom,bcl-freq-control-list = <&CPU2 &CPU3>;
 		qcom,bcl-hotplug-list = <&CPU2 &CPU3>;
@@ -2798,9 +2880,9 @@
 			qcom,low-threshold-uamp = <3400000>;
 			qcom,high-threshold-uamp = <4200000>;
 			qcom,mitigation-freq-khz = <576000>;
-			qcom,vph-high-threshold-uv = <3500000>;
-			qcom,vph-low-threshold-uv = <3300000>;
-			qcom,soc-low-threshold = <10>;
+			qcom,vph-high-threshold-uv = <3200000>;
+			qcom,vph-low-threshold-uv = <3000000>;
+			qcom,soc-low-threshold = <0>;
 			qcom,thermal-handle = <&msm_thermal_freq>;
 		};
 	};
@@ -2914,33 +2996,21 @@
 			"AIF4 VI", "MCLK",
 			"RX_BIAS", "MCLK",
 			"MADINPUT", "MCLK",
+
+			"AMIC1", "MIC BIAS1",
+			"MIC BIAS1", "Handset Mic",
+
 			"AMIC2", "MIC BIAS2",
 			"MIC BIAS2", "Headset Mic",
-			"AMIC3", "MIC BIAS2",
-			"MIC BIAS2", "ANCRight Headset Mic",
-			"AMIC4", "MIC BIAS2",
-			"MIC BIAS2", "ANCLeft Headset Mic",
-			"AMIC5", "MIC BIAS3",
-			"MIC BIAS3", "Handset Mic",
-			"AMIC6", "MIC BIAS4",
-			"MIC BIAS4", "Analog Mic6",
-			"DMIC0", "MIC BIAS1",
-			"MIC BIAS1", "Digital Mic0",
-			"DMIC1", "MIC BIAS1",
-			"MIC BIAS1", "Digital Mic1",
-			"DMIC2", "MIC BIAS3",
-			"MIC BIAS3", "Digital Mic2",
-			"DMIC3", "MIC BIAS3",
-			"MIC BIAS3", "Digital Mic3",
-			"DMIC4", "MIC BIAS4",
-			"MIC BIAS4", "Digital Mic4",
-			"DMIC5", "MIC BIAS4",
-			"MIC BIAS4", "Digital Mic5",
+			
+			"AMIC3", "MIC BIAS3",
+			"MIC BIAS3", "Analog Mic3",
+			
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
 
-		qcom,msm-mbhc-hphl-swh = <0>;
-		qcom,msm-mbhc-gnd-swh = <0>;
+		qcom,msm-mbhc-hphl-swh = <1>;
+		qcom,msm-mbhc-gnd-swh = <1>;
 		qcom,tasha-mclk-clk-freq = <9600000>;
 		asoc-platform = <&pcm0>, <&pcm1>, <&pcm2>, <&voip>, <&voice>,
 				<&loopback>, <&compress>, <&hostless>,
@@ -2952,7 +3022,7 @@
 				"msm-lsm-client", "msm-pcm-routing", "msm-cpe-lsm",
 				"msm-compr-dsp", "msm-pcm-dsp-noirq",
 				"msm-cpe-lsm.3";
-		asoc-cpu = <&dai_pri_auxpcm>, <&dai_sec_auxpcm>, <&dai_hdmi>, <&dai_mi2s>,
+		asoc-cpu = <&dai_pri_auxpcm>, <&dai_sec_auxpcm>, <&dai_hdmi>, <&dai_mi2s>, <&dai_mi2s_quat>,
 				<&sb_0_rx>, <&sb_0_tx>, <&sb_1_rx>, <&sb_1_tx>,
 				<&sb_2_rx>, <&sb_2_tx>, <&sb_3_rx>, <&sb_3_tx>,
 				<&sb_4_rx>, <&sb_4_tx>, <&sb_5_tx>, <&afe_pcm_rx>,
@@ -2961,7 +3031,7 @@
 				<&incall_music_rx>, <&incall_music2_rx>,
 				<&sb_5_rx>, <&sb_6_rx>;
 		asoc-cpu-names = "msm-dai-q6-auxpcm.1", "msm-dai-q6-auxpcm.2",
-				"msm-dai-q6-hdmi.8", "msm-dai-q6-mi2s.2",
+				"msm-dai-q6-hdmi.8", "msm-dai-q6-mi2s.2","msm-dai-q6-mi2s.3",
 				"msm-dai-q6-dev.16384", "msm-dai-q6-dev.16385",
 				"msm-dai-q6-dev.16386", "msm-dai-q6-dev.16387",
 				"msm-dai-q6-dev.16388", "msm-dai-q6-dev.16389",
@@ -3238,15 +3308,21 @@
 			qcom,msm-mi2s-rx-lines = <2>;
 			qcom,msm-mi2s-tx-lines = <1>;
 			pinctrl-names = "default", "sleep";
-			pinctrl-0 = <&tert_mi2s_active &tert_mi2s_sd0_active>;
-			pinctrl-1 = <&tert_mi2s_sleep &tert_mi2s_sd0_sleep>;
+	//pinctrl0&pinctrl1 of mi2s in msm8996-pinctrl.dtsi needed to be checked. liulf8.
+	//		pinctrl-0 = <&tert_mi2s_active &tert_mi2s_sd0_active>;
+	//		pinctrl-1 = <&tert_mi2s_sleep &tert_mi2s_sd0_sleep>;
 		};
 
 		dai_mi2s_quat: qcom,msm-dai-q6-mi2s-quat {
 			compatible = "qcom,msm-dai-q6-mi2s";
 			qcom,msm-dai-q6-mi2s-dev-id = <3>;
-			qcom,msm-mi2s-rx-lines = <1>;
-			qcom,msm-mi2s-tx-lines = <0>;
+			qcom,msm-mi2s-rx-lines = <2>;
+			qcom,msm-mi2s-tx-lines = <1>;
+#if defined CONFIG_PRODUCT_Z2_ROW || defined CONFIG_PRODUCT_Z2_X
+			pinctrl-names = "default","sleep";
+			pinctrl-0 = <&quat_mi2s_active &quat_mi2s_sd0_active &quat_mi2s_sd1_active>;
+			pinctrl-1 = <&quat_mi2s_sleep &quat_mi2s_sd0_sleep &quat_mi2s_sd1_sleep>;
+#endif
 		};
 	};
 

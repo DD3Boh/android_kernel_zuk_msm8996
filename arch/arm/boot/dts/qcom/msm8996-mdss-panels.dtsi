@@ -10,6 +10,9 @@
  * GNU General Public License for more details.
  */
 
+#include "dsi-panel-samsung-1080p-cmd.dtsi"
+#include "dsi-panel-tianma-1080p-video.dtsi"
+#include "dsi-panel-tianma-ft8716-1080p-video.dtsi"
 #include "dsi-panel-sharp-dualmipi-wqxga-video.dtsi"
 #include "dsi-panel-nt35597-dualmipi-wqxga-video.dtsi"
 #include "dsi-panel-nt35597-dualmipi-wqxga-cmd.dtsi"
@@ -208,6 +211,22 @@
 	qcom,mdss-dsi-panel-status-check-mode = "bta_check";
 };
 
+&dsi_tianma_otm1901a_vid {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 19 07 08 05 03 04 a0];
+};
+
+&dsi_tianma_ft8716_vid {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 1e 07 09 05 03 04 a0
+		23 19 07 08 05 03 04 a0];
+};
+
 &dsi_nt35597_dsc_video {
 	qcom,mdss-dsi-panel-timings-phy-v2 = [20 1d 05 07 03 03 04 a0
 		20 1d 05 07 03 03 04 a0
@@ -258,4 +277,12 @@
 		23 1f 07 09 05 03 04 a0
 		23 1f 07 09 05 03 04 a0
 		23 19 08 08 05 03 04 a0];
+};
+
+&dsi_samsung_1080_cmd {
+	qcom,mdss-dsi-panel-timings-phy-v2 = [22 1e 07 08 04 03 04 a0
+		22 1e 07 08 04 03 04 a0
+		22 1e 07 08 04 03 04 a0
+		22 1e 07 08 04 03 04 a0
+		22 17 07 08 04 03 04 a0];
 };
