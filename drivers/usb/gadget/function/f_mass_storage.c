@@ -1332,6 +1332,10 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 	int		msf = common->cmnd[1] & 0x02;
 	int		start_track = common->cmnd[6];
 	u8		*buf = (u8 *)bh->buf;
+#ifdef SHENQI_MAC_OS_SUPPORT
+        u8              format;
+        int             ret;
+#endif
 
 	if ((common->cmnd[1] & ~0x02) != 0 ||	/* Mask away MSF */
 			start_track > 1) {
@@ -1339,6 +1343,7 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 		return -EINVAL;
 	}
 
+#ifndef SHENQI_MAC_OS_SUPPORT
 	memset(buf, 0, 20);
 	buf[1] = (20-2);		/* TOC data length */
 	buf[2] = 1;			/* First track number */
@@ -1346,11 +1351,30 @@ static int do_read_toc(struct fsg_common *common, struct fsg_buffhd *bh)
 	buf[5] = 0x16;			/* Data track, copying allowed */
 	buf[6] = 0x01;			/* Only track is number 1 */
 	store_cdrom_address(&buf[8], msf, 0);
+#else
+        format = common->cmnd[2] & 0xf;
+        /*
+         * Check if CDB is old style SFF-8020i
+         * i.e. format is in 2 MSBs of byte 9
+         * Mac OS-X host sends us this.
+         */
+        if(format == 0)
+                format = (common->cmnd[9] >> 6) & 0x3;
+#endif
 
+#ifndef SHENQI_MAC_OS_SUPPORT
 	buf[13] = 0x16;			/* Lead-out track is data */
 	buf[14] = 0xAA;			/* Lead-out track number */
 	store_cdrom_address(&buf[16], msf, curlun->num_sectors);
 	return 20;
+#else
+        ret = fsg_get_toc(curlun, msf, format, buf);
+        if(ret<0){
+                curlun->sense_data = SS_INVALID_FIELD_IN_CDB;
+                return ret;
+        }
+        return ret;
+#endif
 }
 
 static int do_mode_sense(struct fsg_common *common, struct fsg_buffhd *bh)
@@ -2111,7 +2135,11 @@ static int do_scsi_command(struct fsg_common *common)
 		common->data_size_from_cmnd =
 			get_unaligned_be16(&common->cmnd[7]);
 		reply = check_command(common, 10, DATA_DIR_TO_HOST,
-				      (7<<6) | (1<<1), 1,
+#ifndef SHENQI_MAC_OS_SUPPORT
+                                      (7<<6) | (1<<1), 1,
+#else
+                                      (0xf<<6) | (1<<1), 1,
+#endif
 				      "READ TOC");
 		if (reply == 0)
 			reply = do_read_toc(common, bh);

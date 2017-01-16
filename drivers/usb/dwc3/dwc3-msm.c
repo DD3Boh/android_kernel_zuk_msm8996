@@ -136,6 +136,11 @@ struct dwc3_msm_req_complete {
 			      struct usb_request *req);
 };
 
+#define SUPPORT_NON_STANDARD_CHARGER
+#ifdef SUPPORT_NON_STANDARD_CHARGER
+int lenuk_ns_charger = 0;
+#endif
+
 enum dwc3_id_state {
 	DWC3_ID_GROUND = 0,
 	DWC3_ID_FLOAT,
@@ -2517,6 +2522,10 @@ static int dwc3_msm_power_set_property_usb(struct power_supply *psy,
 		switch (psy->type) {
 		case POWER_SUPPLY_TYPE_USB:
 			mdwc->chg_type = DWC3_SDP_CHARGER;
+#ifdef SUPPORT_NON_STANDARD_CHARGER
+			if (lenuk_ns_charger)
+				dwc3_msm_gadget_vbus_draw(mdwc, 500);
+#endif
 			break;
 		case POWER_SUPPLY_TYPE_USB_DCP:
 			mdwc->chg_type = DWC3_DCP_CHARGER;
