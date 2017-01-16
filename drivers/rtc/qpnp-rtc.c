@@ -305,6 +305,7 @@ qpnp_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	}
 
 	rtc_tm_to_time(&rtc_tm, &secs_rtc);
+	printk("%s,current time(utc) value:%lu, alarm time(utc) at:%lu\n",__func__,secs_rtc,secs);
 	if (secs < secs_rtc) {
 		dev_err(dev, "Trying to set alarm in the past\n");
 		return -EINVAL;
@@ -342,6 +343,25 @@ qpnp_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 			alarm->time.tm_hour, alarm->time.tm_min,
 			alarm->time.tm_sec, alarm->time.tm_mday,
 			alarm->time.tm_mon, alarm->time.tm_year);
+	{
+		int rc;
+		u8 value[4];
+		unsigned long secs;
+
+		rc = qpnp_read_wrapper(rtc_dd, value,
+				rtc_dd->alarm_base + REG_OFFSET_ALARM_RW,
+				NUM_8_BIT_RTC_REGS);
+		if (rc) {
+			dev_err(dev, "Read from ALARM reg failed\n");
+			return rc;
+		}
+
+		secs = TO_SECS(value);
+
+		printk("%s alarm set in rtc :%lu\n",__func__,secs);
+
+	}
+
 rtc_rw_fail:
 	spin_unlock_irqrestore(&rtc_dd->alarm_ctrl_lock, irq_flags);
 	return rc;
@@ -411,6 +431,23 @@ qpnp_rtc_alarm_irq_enable(struct device *dev, unsigned int enabled)
 			NUM_8_BIT_RTC_REGS);
 		if (rc)
 			dev_err(dev, "Clear ALARM value reg failed\n");
+		else {
+			int rc;
+			u8 value[4];
+			unsigned long secs;
+
+			rc = qpnp_read_wrapper(rtc_dd, value,
+					rtc_dd->alarm_base + REG_OFFSET_ALARM_RW,
+					NUM_8_BIT_RTC_REGS);
+			if (rc) {
+				dev_err(dev, "Read from ALARM reg failed\n");
+				return rc;
+			}
+
+			secs = TO_SECS(value);
+
+			printk("%s alarm set in rtc :%lu\n",__func__,secs);
+		}
 	}
 
 rtc_rw_fail:
