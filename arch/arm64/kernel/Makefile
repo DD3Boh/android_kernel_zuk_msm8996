@@ -42,7 +42,7 @@ arm64-obj-$(CONFIG_MSM_APP_API)		+= app_api.o
 arm64-obj-$(CONFIG_MSM_APP_SETTINGS)	+= app_setting.o
 
 obj-y					+= $(arm64-obj-y) vdso/
-obj-y					+= user_sysfs_private.o
+#obj-y					+= user_sysfs_private.o
 obj-m					+= $(arm64-obj-m)
 head-y					:= head.o
 extra-y					:= $(head-y) vmlinux.lds
