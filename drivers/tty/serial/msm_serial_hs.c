@@ -2303,6 +2303,7 @@ void msm_hs_resource_on(struct msm_hs_port *msm_uport)
 /* Request to turn off uart clock once pending TX is flushed */
 void msm_hs_request_clock_off(struct uart_port *uport)
 {
+	int client_count = 0;
 	struct msm_hs_port *msm_uport = UARTDM_TO_MSM(uport);
 
 	if (atomic_read(&msm_uport->client_count) <= 0) {
@@ -3171,7 +3172,8 @@ static int msm_hs_pm_resume(struct device *dev)
 
 	LOG_USR_MSG(msm_uport->ipc_msm_hs_pwr_ctxt,
 		"%s:PM State:Active client_count %d\n", __func__, client_count);
-	return 0;
+exit_pm_resume:
+	return ret;
 }
 
 #ifdef CONFIG_PM
