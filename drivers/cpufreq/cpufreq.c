@@ -2407,6 +2407,47 @@ static struct notifier_block __refdata cpufreq_cpu_notifier = {
 	.notifier_call = cpufreq_cpu_callback,
 };
 
+int cpufreq_overfreq(unsigned int enable)
+{
+	struct cpufreq_frequency_table *freq_table;
+	struct cpufreq_policy *policy;
+	int ret = -EINVAL;
+	unsigned int max_freq = 0; // max freq
+	unsigned int nax_freq = 0; // the second max freq
+	unsigned int freq;
+	struct cpufreq_frequency_table *pos;
+
+	list_for_each_entry(policy, &cpufreq_policy_list, policy_list) {
+		freq_table = cpufreq_frequency_get_table(policy->cpu);
+		if (freq_table) {
+			max_freq = nax_freq = 0;//reset
+			cpufreq_for_each_valid_entry(pos, freq_table) {
+				freq = pos->frequency;
+
+				//pr_debug("table entry %u: %u kHz\n", (int)(pos - table), freq);
+				if (freq > max_freq) {
+					nax_freq = max_freq;
+					max_freq = freq;
+				} else if (freq > nax_freq && freq < max_freq) {
+					nax_freq = freq;
+				}	
+
+				//just adjust cpuinfo.max_freq
+				if (enable)
+					//policy->max = policy->user_policy.max = policy->cpuinfo.max_freq = max_freq;
+					policy->user_policy.max = policy->cpuinfo.max_freq = max_freq;
+				else
+					//policy->max = policy->user_policy.max = policy->cpuinfo.max_freq = nax_freq;
+					policy->user_policy.max = policy->cpuinfo.max_freq = nax_freq;
+			}
+			//re-start governor
+			__cpufreq_governor(policy, CPUFREQ_GOV_STOP);
+			__cpufreq_governor(policy, CPUFREQ_GOV_START);
+		}
+	}
+
+	return ret;
+}
 /*********************************************************************
  *               BOOST						     *
  *********************************************************************/
