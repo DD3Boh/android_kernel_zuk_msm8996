@@ -1052,11 +1052,14 @@ bool __init early_init_dt_verify(void *params)
 	return true;
 }
 
-
+extern int __init early_init_dt_scan_boot_log(unsigned long node, const char *uname, int depth, void *data);
 void __init early_init_dt_scan_nodes(void)
 {
 	/* Retrieve various information from the /chosen node */
 	of_scan_flat_dt(early_init_dt_scan_chosen, boot_command_line);
+
+	/* Retrieve various information from the /rkm_log node */
+	of_scan_flat_dt(early_init_dt_scan_boot_log, NULL);
 
 	/* Initialize {size,address}-cells info */
 	of_scan_flat_dt(early_init_dt_scan_root, NULL);
