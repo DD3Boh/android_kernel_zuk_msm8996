@@ -45,7 +45,7 @@
 #define MBHC_BUTTON_PRESS_THRESHOLD_MIN 250
 #define GND_MIC_SWAP_THRESHOLD 4
 #define WCD_FAKE_REMOVAL_MIN_PERIOD_MS 100
-#define HS_VREF_MIN_VAL 1400
+#define HS_VREF_MIN_VAL 1200
 #define FW_READ_ATTEMPTS 15
 #define FW_READ_TIMEOUT 4000000
 #define FAKE_REM_RETRY_ATTEMPTS 3
@@ -496,6 +496,11 @@ static void wcd_mbhc_set_and_turnoff_hph_padac(struct wcd_mbhc *mbhc)
 
 	WCD_MBHC_REG_READ(WCD_MBHC_HPH_CNP_WG_TIME, wg_time);
 	wg_time += 1;
+	if (mbhc->mbhc_cfg->default_gnd_mic &&
+		mbhc->mbhc_cfg->default_gnd_mic(mbhc->codec)) {
+		pr_debug("%s: US_EU gpio present,set to default switch\n"
+			, __func__);
+	}
 
 	/* If headphone PA is on, check if userspace receives
 	* removal event to sync-up PA's state */
@@ -1919,10 +1924,23 @@ static irqreturn_t wcd_mbhc_btn_press_handler(int irq, void *data)
 	struct wcd_mbhc *mbhc = data;
 	int mask;
 	unsigned long msec_val;
+	unsigned long msec_delta;
+	static unsigned long msec_first = 0;
 
 	pr_debug("%s: enter\n", __func__);
 	complete(&mbhc->btn_press_compl);
 	WCD_MBHC_RSC_LOCK(mbhc);
+
+	msec_delta = jiffies_to_msecs(jiffies - msec_first);
+	if(msec_delta < 100){
+		pr_err("%s:cancel repeat press,msec_delta = %ld\n", __func__,msec_delta);
+		goto done;
+	}
+	msec_first = jiffies;
+
+	/* send event to sw intr handler*/
+	mbhc->is_btn_press = true;
+
 	wcd_cancel_btn_work(mbhc);
 	if (wcd_swch_level_remove(mbhc)) {
 		pr_debug("%s: Switch level is low ", __func__);
