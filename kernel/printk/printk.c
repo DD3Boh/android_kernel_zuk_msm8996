@@ -51,6 +51,7 @@
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/printk.h>
+#include <linux/le_rkm.h>
 
 #include "console_cmdline.h"
 #include "braille.h"
@@ -912,8 +913,10 @@ void __init setup_log_buf(int early)
 	if (!early && !new_log_buf_len)
 		log_buf_add_cpu();
 
-	if (!new_log_buf_len)
+	if (!new_log_buf_len) {
+		rkm_init_log_buf_header(__log_buf, log_buf_len);
 		return;
+	}
 
 	if (early) {
 		new_log_buf =

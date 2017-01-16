@@ -271,6 +271,8 @@ void __weak arch_suspend_enable_irqs(void)
  *
  * This function should be called after devices have been suspended.
  */
+extern void vreg_before_sleep_save_configs(void);
+extern void msm_gpio_before_sleep_save_configs(void);
 static int suspend_enter(suspend_state_t state, bool *wakeup)
 {
 	char suspend_abort[MAX_SUSPEND_ABORT_LEN];
@@ -321,6 +323,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		trace_suspend_resume(TPS("machine_suspend"), state, false);
 		goto Platform_wake;
 	}
+
+	vreg_before_sleep_save_configs();
+	msm_gpio_before_sleep_save_configs();
 
 	error = disable_nonboot_cpus();
 	if (error || suspend_test(TEST_CPUS)) {
@@ -510,6 +515,8 @@ static void pm_suspend_marker(char *annotation)
  * Check if the value of @state represents one of the supported states,
  * execute enter_state() and update system suspend statistics.
  */
+extern void log_suspend_enter(void);
+extern void log_suspend_exit(int error);
 int pm_suspend(suspend_state_t state)
 {
 	int error;
@@ -518,6 +525,7 @@ int pm_suspend(suspend_state_t state)
 		return -EINVAL;
 
 	pm_suspend_marker("entry");
+	log_suspend_enter();
 	error = enter_state(state);
 	if (error) {
 		suspend_stats.fail++;
@@ -526,6 +534,7 @@ int pm_suspend(suspend_state_t state)
 		suspend_stats.success++;
 	}
 	pm_suspend_marker("exit");
+	log_suspend_exit(error);
 	return error;
 }
 EXPORT_SYMBOL(pm_suspend);

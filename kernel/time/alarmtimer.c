@@ -125,8 +125,12 @@ void set_power_on_alarm(void)
 		alarm_secs = alarm_ts.tv_sec;
 	}
 
-	if (!alarm_secs)
+	printk("%s set alarm at %ld\n",__func__,alarm_secs);
+
+	if (!alarm_secs){
+		printk("%s alarm time == 0 , so disable alarm\n",__func__); 
 		goto disable_alarm;
+	}
 
 	getnstimeofday(&wall_time);
 
@@ -135,8 +139,10 @@ void set_power_on_alarm(void)
 	 * It is to make sure that alarm time will be always
 	 * bigger than wall time.
 	*/
-	if (alarm_secs <= wall_time.tv_sec + 1)
+	if (alarm_secs <= wall_time.tv_sec + 1){
+		printk("%s alarm time < wall_time, so disable alarm\n",__func__); 
 		goto disable_alarm;
+	}
 
 	rtc = alarmtimer_get_rtcdev();
 	if (!rtc)
@@ -1049,6 +1055,108 @@ static struct platform_driver alarmtimer_driver = {
 	}
 };
 
+static int alarm_reason_rwstates = 0;
+static char alarm_wakesrc[40];
+static const char *wake_source_type[] = {
+	"androidboot.bootreason=wake_batt",         //
+	"androidboot.bootreason=pwr_putton",        //power key
+	"androidboot.bootreason=rtcalarm",          //power off alarm
+	"androidboot.bootreason=usb_chrg",          //usb charger
+	"androidboot.bootreason=smpl",              //low bat
+	"androidboot.bootreason=wdog",              //reset
+	"androidboot.bootreason=ac_charger",        //cold boot
+	"androidboot.bootreason=unknown",           //
+	"androidboot.bootreason=cbl_power"          //cable power
+};
+static char seace_valu[]={"androidboot.mode"};
+
+static ssize_t alarm_reason_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	char *name = saved_command_line;
+
+	ssize_t ret = 0;
+	name = strstr(name, seace_valu);
+	if (name == NULL)
+		return ret;
+
+	if (alarm_reason_rwstates == 0){
+		char *va = NULL;
+		memset(alarm_wakesrc, 0 , sizeof(alarm_wakesrc));
+		name = strchr(name, '=');
+		name=name+1;
+		va=strchr(name, ' ');
+		if (va != NULL)
+			*va = 0;
+		if (!strncmp(name,"kpdpwr",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[1], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"rtc",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[2], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"usb_chg",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[3], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"dc_chg",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[6], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"smpl",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[4], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"hard_rst",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[5], sizeof(alarm_wakesrc));
+		}else if(!strncmp(name,"cblpwr",12)){
+			strlcpy(alarm_wakesrc, wake_source_type[8], sizeof(alarm_wakesrc));
+		}else {
+			strlcpy(alarm_wakesrc, wake_source_type[7], sizeof(alarm_wakesrc));
+		}
+	}
+	printk( "alarm_reason=%s\n", alarm_wakesrc);
+	sprintf(buf, "%s\n", alarm_wakesrc);
+	ret = strlen(buf) + 1;
+
+	return ret;
+}
+
+static ssize_t alarm_reason_store(struct device *dev,
+		struct device_attribute *attr,
+		const char *buf, size_t count)
+{
+	char strbuf[128];
+
+	if (buf == NULL){
+		strlcpy(alarm_wakesrc, "store_buff_null", sizeof(alarm_wakesrc));
+		alarm_reason_rwstates = 1;
+		return -EINVAL;
+	}
+
+	snprintf(strbuf, sizeof(strbuf), "%s", buf);
+	printk("alarm_reason modified to %s\n",strbuf);
+	
+	strlcpy(alarm_wakesrc, buf, sizeof(alarm_wakesrc));
+	alarm_reason_rwstates = 1;
+	return count;
+}
+
+static DEVICE_ATTR(alarmcmd, 0644, alarm_reason_show, alarm_reason_store);
+static struct kobject *android_alarm_kobj;
+
+static int alarm_sysfs_add(void)
+{
+	int ret;
+
+	android_alarm_kobj = kobject_create_and_add("android_alarm", NULL);
+	if (android_alarm_kobj == NULL) {
+		printk(KERN_ERR "Alarm register failed\n");
+		ret = -ENOMEM;
+		goto err;
+	}
+	ret = sysfs_create_file(android_alarm_kobj, &dev_attr_alarmcmd.attr);
+	if (ret) {
+		printk(KERN_ERR "Alarm sysfs create file failed\n");
+		goto err4;
+	}
+		return 0;
+err4:
+	kobject_del(android_alarm_kobj);
+err:
+	return ret;
+}
 /**
  * alarmtimer_init - Initialize alarm timer code
  *
@@ -1114,6 +1222,8 @@ static int __init alarmtimer_init(void)
 		error = -ENOMEM;
 		goto out_wq;
 	}
+
+	alarm_sysfs_add();
 
 	return 0;
 out_wq:
