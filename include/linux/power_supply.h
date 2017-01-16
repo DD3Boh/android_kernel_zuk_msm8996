@@ -19,6 +19,9 @@
 #include <linux/notifier.h>
 #include <linux/types.h>
 
+#define SUPPORT_CPU_TEMP_MONITOR
+#define SUPPORT_LENUK_CUSTOM_BATTERY_MONITOR
+
 /*
  * All voltages, currents, charges, energies, time and temperatures in uV,
  * µA, µAh, µWh, seconds and tenths of degree Celsius unless otherwise
@@ -170,6 +173,17 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_SCOPE,
 	POWER_SUPPLY_PROP_CHARGE_TERM_CURRENT,
 	POWER_SUPPLY_PROP_CALIBRATE,
+#ifdef SUPPORT_LENUK_CUSTOM_BATTERY_MONITOR
+	POWER_SUPPLY_PROP_NS_CHARGER,
+	POWER_SUPPLY_PROP_CALLING,
+	POWER_SUPPLY_PROP_SCREEN_ON,
+#endif
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+	POWER_SUPPLY_PROP_TEMP_CPU0,
+	POWER_SUPPLY_PROP_TEMP_CPU1,
+	POWER_SUPPLY_PROP_TEMP_CPU2,
+	POWER_SUPPLY_PROP_TEMP_CPU3,
+#endif
 	/* Local extensions */
 	POWER_SUPPLY_PROP_USB_HC,
 	POWER_SUPPLY_PROP_USB_OTG,
@@ -243,6 +257,12 @@ enum power_supply_type {
 	POWER_SUPPLY_TYPE_TYPEC,	/*Type-C */
 	POWER_SUPPLY_TYPE_UFP,		/* Type-C UFP */
 	POWER_SUPPLY_TYPE_DFP,		/* TYpe-C DFP */
+#ifdef SUPPORT_LENUK_CUSTOM_BATTERY_MONITOR
+	POWER_SUPPLY_PROP_LENUK_BATTERY,
+#endif
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+	POWER_SUPPLY_TYPE_TEMP,
+#endif
 };
 
 enum power_supply_notifier_events {
@@ -338,6 +358,7 @@ extern struct atomic_notifier_head power_supply_notifier;
 extern int power_supply_reg_notifier(struct notifier_block *nb);
 extern void power_supply_unreg_notifier(struct notifier_block *nb);
 extern struct power_supply *power_supply_get_by_name(const char *name);
+extern int get_usb_id_state(void);
 #ifdef CONFIG_OF
 extern struct power_supply *power_supply_get_by_phandle(struct device_node *np,
 							const char *property);

@@ -641,6 +641,12 @@ static struct battery_status batt_s[] = {
 	[BATT_MISSING] = {0, 0, 0, 1, 0},
 };
 
+static int smb1351_version = 0;
+module_param_named(
+	smb1351_version, smb1351_version,
+	int, S_IRUSR | S_IWUSR
+);
+
 static void smb1351_stay_awake(struct smb1351_wakeup_source *source,
 					enum wakeup_src wk_src)
 {
@@ -1340,6 +1346,7 @@ static int smb_chip_get_version(struct smb1351_charger *chip)
 			chip->version = SMB1350;
 		else
 			chip->version = SMB1351;
+		smb1351_version = chip->version;
 	}
 
 	return rc;
@@ -4012,6 +4019,49 @@ static const struct file_operations status_debugfs_ops = {
 	.release	= single_release,
 };
 
+static int show_registers_regs(struct seq_file *m, void *data)
+{
+	struct smb1351_charger *chip = m->private;
+	int rc;
+	u8 reg;
+	u8 addr;
+
+	for (addr = 0; addr <= LAST_CNFG_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	for (addr = FIRST_CMD_REG; addr <= LAST_CMD_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	for (addr = FIRST_STATUS_REG; addr <= LAST_STATUS_REG; addr++) {
+		rc = smb1351_read_reg(chip, addr, &reg);
+		if (!rc)
+			seq_printf(m, "%02x,", reg);
+	}
+
+	return 0;
+}
+
+static int registers_debugfs_open(struct inode *inode, struct file *file)
+{
+	struct smb1351_charger *chip = inode->i_private;
+
+	return single_open(file, show_registers_regs, chip);
+}
+
+static const struct file_operations registers_debugfs_ops = {
+	.owner		= THIS_MODULE,
+	.open		= registers_debugfs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int show_irq_count(struct seq_file *m, void *data)
 {
 	int i, j, total = 0;
@@ -4419,6 +4469,12 @@ static int create_debugfs_entries(struct smb1351_charger *chip)
 					&cmd_debugfs_ops);
 		if (!ent)
 			pr_err("Couldn't create cmd debug file\n");
+
+		ent = debugfs_create_file("smb1351_registers", S_IFREG | S_IRUGO,
+					  chip->debug_root, chip,
+					  &registers_debugfs_ops);
+		if (!ent)
+			pr_err("Couldn't create registers debug file\n");
 
 		ent = debugfs_create_x32("address", S_IFREG | S_IWUSR | S_IRUGO,
 					chip->debug_root,

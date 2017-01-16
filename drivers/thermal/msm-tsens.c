@@ -1532,6 +1532,25 @@ static int tsens_tz_get_temp(struct thermal_zone_device *thermal,
 	return 0;
 }
 
+#define SUPPORT_CPU_TEMP_MONOTOR
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+int get_tsens_temp(uint32_t id, unsigned long *temp)
+{
+	int rc = 0;
+
+	if (tsens_is_ready() <= 0) {
+		pr_debug("TSENS early init not done\n");
+		return -EPROBE_DEFER;
+	}
+
+	rc = msm_tsens_get_temp(id, temp);
+	if (rc)
+		return rc;
+
+	return 0;
+}
+#endif
+
 int tsens_get_temp(struct tsens_device *device, unsigned long *temp)
 {
 	int rc = 0;
