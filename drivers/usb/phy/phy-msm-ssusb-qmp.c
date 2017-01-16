@@ -356,6 +356,8 @@ struct msm_ssphy_qmp {
 	int			init_seq_len;
 	unsigned int		*qmp_phy_reg_offset;
 	int			reg_offset_cnt;
+	unsigned int		*tuning_seq;
+	int			tuning_seq_len;
 };
 
 static const struct of_device_id msm_usb_id_table[] = {
@@ -519,6 +521,19 @@ static int configure_phy_regs(struct usb_phy *uphy,
 	return 0;
 }
 
+static void msm_ssphy_write_seq(void __iomem *base, u32 *seq, int cnt, unsigned long delay)
+{
+        int i;
+
+        pr_debug("Seq count:%d\n", cnt);
+        for (i = 0; i < cnt; i = i+2) {
+                pr_debug("write 0x%02x to 0x%02x\n", seq[i], seq[i+1]);
+                writel_relaxed(seq[i], base + seq[i+1]);
+                if (delay)
+                        usleep_range(delay, (delay + 2000));
+        }
+}
+
 /* SSPHY Initialization */
 static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 {
@@ -611,6 +626,9 @@ static int msm_ssphy_qmp_init(struct usb_phy *uphy)
 			return ret;
 		}
 	}
+
+	if (phy->tuning_seq && phy->tuning_seq_len)
+		msm_ssphy_write_seq(phy->base, phy->tuning_seq, phy->tuning_seq_len, 0);
 
 	writel_relaxed(0x03, phy->base + phy->phy_reg[USB3_PHY_START]);
 	writel_relaxed(0x00, phy->base + phy->phy_reg[USB3_PHY_SW_RESET]);
@@ -838,6 +856,48 @@ static int msm_ssphy_qmp_notify_disconnect(struct usb_phy *uphy,
 	return 0;
 }
 
+static ssize_t msm_ssphy_show_tuning(struct device *dev, 
+                          struct device_attribute *attr, char *buf)
+{
+        struct platform_device *pdev = container_of(dev, struct platform_device, dev);
+	struct msm_ssphy_qmp *phy = platform_get_drvdata(pdev);
+	int offset = 0;
+	int addr=0x218,i;
+
+	for(i=0;i<20;i++){
+		offset += sprintf(&buf[offset],"[0x%03x] = 0x%02x\n",addr,(unsigned char)readl_relaxed(phy->base + addr));
+		addr += 4;
+	}
+
+	return offset;
+}
+
+static ssize_t msm_ssphy_store_tuning(struct device *dev, 
+                struct device_attribute *attr, const char *buf, size_t count)
+{
+        struct platform_device *pdev = container_of(dev, struct platform_device, dev);
+	struct msm_ssphy_qmp *phy = platform_get_drvdata(pdev);
+	int val,addr,ret;
+	char *p,*str;
+
+	str = (char *)buf;
+	while(str){
+		p = strsep(&str, ",");
+		if(p){
+			ret = sscanf(p,"%x=%x",&addr,&val);
+			if(ret==2){
+				writel_relaxed(val, phy->base + addr);
+				printk("usb phy set register [0x%x] = 0x%02x\n",addr,val);
+			}
+		}
+	}
+
+        return count;
+}
+
+
+static DEVICE_ATTR(tuning, S_IRUGO|S_IWUSR, msm_ssphy_show_tuning, msm_ssphy_store_tuning);
+
 static int msm_ssphy_qmp_probe(struct platform_device *pdev)
 {
 	struct msm_ssphy_qmp *phy;
@@ -997,6 +1057,29 @@ static int msm_ssphy_qmp_probe(struct platform_device *pdev)
 		}
 	}
 
+	phy->tuning_seq_len = 0;
+	phy->tuning_seq = NULL;
+	size = 0;
+	of_get_property(dev->of_node, "qcom,phy-tuning-seq", &size);
+	if (size) {
+		phy->tuning_seq_len = (size / sizeof(*phy->tuning_seq));
+		if (phy->tuning_seq_len % 2) {
+			dev_err(dev, "invalid tuning_seq_len\n");
+			phy->tuning_seq_len = 0;
+		} else {
+			phy->tuning_seq = devm_kzalloc(dev, size, GFP_KERNEL);
+			if (phy->tuning_seq) {
+				of_property_read_u32_array(dev->of_node,
+						"qcom,phy-tuning-seq",
+					phy->tuning_seq,
+					phy->tuning_seq_len);
+			}else{
+				dev_dbg(dev, "error allocating memory for tuning_seq\n");
+				phy->tuning_seq_len = 0;
+			}
+		}
+	}
+
 	phy->emulation = of_property_read_bool(dev->of_node,
 						"qcom,emulation");
 
@@ -1070,6 +1153,10 @@ static int msm_ssphy_qmp_probe(struct platform_device *pdev)
 	phy->phy.reset			= msm_ssphy_qmp_reset;
 	phy->phy.type			= USB_PHY_TYPE_USB3;
 
+	ret = device_create_file(dev, &dev_attr_tuning);
+	if (ret)
+		dev_warn(dev, "Can't register sysfs attribute\n");
+
 	ret = usb_add_phy_dev(&phy->phy);
 	if (ret)
 		goto disable_ss_ldo;
@@ -1088,6 +1175,8 @@ err:
 static int msm_ssphy_qmp_remove(struct platform_device *pdev)
 {
 	struct msm_ssphy_qmp *phy = platform_get_drvdata(pdev);
+
+	device_remove_file(&pdev->dev, &dev_attr_tuning);
 
 	if (!phy)
 		return 0;
