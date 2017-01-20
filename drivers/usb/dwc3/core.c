@@ -45,17 +45,6 @@
 
 #include "debug.h"
 
-#ifdef CONFIG_PRODUCT_Z2_PLUS
-static int usb30_disabled = 1;
-module_param_call(usb30_disabled, NULL, param_get_int, &usb30_disabled, S_IRUGO);
-#else
-static int usb30_disabled = 0;
-static int dwc3_set_usb30_disabled(const char *val, struct kernel_param *kp);
-module_param_call(usb30_disabled, dwc3_set_usb30_disabled, param_get_int, &usb30_disabled, S_IRUGO | S_IWUSR);
-#endif
-MODULE_PARM_DESC(usb30_disabled, "Disabled usb 3.0");
-
-struct dwc3             *tmp_dwc = NULL;
 /* -------------------------------------------------------------------------- */
 
 void dwc3_set_mode(struct dwc3 *dwc, u32 mode)
@@ -990,8 +979,6 @@ static int dwc3_probe(struct platform_device *pdev)
 	}
 	dwc3_notify_event(dwc, DWC3_CONTROLLER_POST_INITIALIZATION_EVENT, 0);
 
-	tmp_dwc = dwc;
-
 	return 0;
 
 err_gadget_exit:
@@ -1196,28 +1183,6 @@ static struct platform_driver dwc3_driver = {
 };
 
 module_platform_driver(dwc3_driver);
-
-#ifndef CONFIG_PRODUCT_Z2_PLUS
-static int dwc3_set_usb30_disabled(const char *val, struct kernel_param *kp)
-{
-	int ret;
-
-	if(!tmp_dwc)
-		return -EAGAIN;
-
-	ret = param_set_int(val, kp);
-	if (ret)
-		return ret;
-
-	if(usb30_disabled){
-		tmp_dwc->maximum_speed = USB_SPEED_HIGH;
-	}else{
-		tmp_dwc->maximum_speed = USB_SPEED_SUPER;
-	}
-
-	return 0;
-}
-#endif
 
 MODULE_ALIAS("platform:dwc3");
 MODULE_AUTHOR("Felipe Balbi <balbi@ti.com>");

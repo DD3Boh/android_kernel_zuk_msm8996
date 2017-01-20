@@ -779,10 +779,7 @@ static int qusb_phy_init(struct usb_phy *phy)
 	 * and try to read EFUSE value only once i.e. not every USB
 	 * cable connect case.
 	 */
-
-	if (qphy->tune2_efuse_reg && get_usb_id_state()) {
-		pr_info("%s(): set turn2 efuse reg if host mode\n", __func__);
-
+	if (qphy->tune2_efuse_reg) {
 		if (!qphy->tune2_val)
 			qusb_phy_get_tune2_param(qphy);
 
@@ -1123,47 +1120,6 @@ static int qusb_phy_notify_disconnect(struct usb_phy *phy,
 	return 0;
 }
 
-static ssize_t qusb_show_tuning(struct device *dev, 
-                          struct device_attribute *attr, char *buf)
-{
-        struct platform_device *pdev = container_of(dev, struct platform_device, dev);
-	struct qusb_phy *qphy = platform_get_drvdata(pdev);
-	int offset = 0;
-	int addr=0x80,i;
-
-	for(i=0;i<5;i++){
-		offset += sprintf(&buf[offset],"[0x%02x] = 0x%02x\n",addr,(unsigned char)readl_relaxed(qphy->base + addr));
-		addr += 4;
-	}
-
-	return offset;
-}
-
-static ssize_t qusb_store_tuning(struct device *dev, 
-                struct device_attribute *attr, const char *buf, size_t count)
-{
-        struct platform_device *pdev = container_of(dev, struct platform_device, dev);
-	struct qusb_phy *qphy = platform_get_drvdata(pdev);
-	int val,addr,ret;
-	char *p,*str;
-
-	str = (char *)buf;
-	while(str){
-		p = strsep(&str, ",");
-		if(p){
-			ret = sscanf(p,"%x=%x",&addr,&val);
-			if(ret==2){
-				writel_relaxed(val, qphy->base + addr);
-				printk("usb phy set register [0x%x] = 0x%02x\n",addr,val);
-			}
-		}
-	}
-
-        return count;
-}
-
-static DEVICE_ATTR(tuning, S_IRUGO|S_IWUSR, qusb_show_tuning, qusb_store_tuning);
-
 static int qusb_phy_probe(struct platform_device *pdev)
 {
 	struct qusb_phy *qphy;
@@ -1457,11 +1413,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 	if (hold_phy_reset)
 		clk_reset(qphy->phy_reset, CLK_RESET_ASSERT);
 
-
-	ret = device_create_file(dev, &dev_attr_tuning);
-	if (ret)
-		dev_warn(dev, "Can't register sysfs attribute\n");
-
 	ret = usb_add_phy_dev(&qphy->phy);
 	return ret;
 }
@@ -1469,8 +1420,6 @@ static int qusb_phy_probe(struct platform_device *pdev)
 static int qusb_phy_remove(struct platform_device *pdev)
 {
 	struct qusb_phy *qphy = platform_get_drvdata(pdev);
-
-	device_remove_file(&pdev->dev, &dev_attr_tuning);
 
 	usb_remove_phy(&qphy->phy);
 

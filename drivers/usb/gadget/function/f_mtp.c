@@ -42,9 +42,8 @@
 
 #include "configfs.h"
 
-#define MIN_BUFFER_SIZE            16384
-#define MTP_RX_BUFFER_INIT_SIZE    131072
-#define MTP_BULK_BUFFER_SIZE       131072
+#define MTP_RX_BUFFER_INIT_SIZE    1048576
+#define MTP_BULK_BUFFER_SIZE       16384
 #define INTR_BUFFER_SIZE           28
 #define MAX_INST_NAME_LEN          40
 
@@ -78,8 +77,6 @@
 #define DRIVER_NAME "mtp"
 
 #define MAX_ITERATION		100
-
-#define SHENQI_MS_OS_DESCRIPTOR
 
 unsigned int mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
 module_param(mtp_rx_req_len, uint, S_IRUGO | S_IWUSR);
@@ -139,11 +136,6 @@ struct mtp_dev {
 	unsigned dbg_read_index;
 	unsigned dbg_write_index;
 	bool is_ptp;
-#ifdef SHENQI_MS_OS_DESCRIPTOR
-        char    usb_functions[32];
-        int             curr_mtp_func_index;
-        int             usb_functions_no;
-#endif //SHENQI_MS_OS_DESCRIPTOR
 };
 
 static struct usb_interface_descriptor mtp_interface_desc = {
@@ -331,95 +323,6 @@ static u8 mtp_os_string[] = {
 	0
 };
 
-#ifdef SHENQI_MS_OS_DESCRIPTOR
-struct mtp_ext_prop_desc_header {
-        __le32  dwLength;
-        __u16   bcdVersion;
-        __le16  wIndex;
-        __u16   wCount;
-};
-
-/* Microsoft xtended Property OS Feature Function Section */
-struct mtp_ext_prop_desc_property {
-        __le32  dwSize;
-        __le32  dwPropertyDataType;
-        __le16  wPropertyNameLength;
-        __u8    bPropertyName[8];               //MTP
-        __le32  dwPropertyDataLength;
-        __u8    bPropertyData[22];              //MTP Device
-}mtp_ext_prop_desc_property;
-
-/* MTP Extended Configuration Descriptor */
-struct {
-        struct mtp_ext_prop_desc_header header;
-        struct mtp_ext_prop_desc_property customProp;
-} mtp_ext_prop_desc = {
-        .header = {
-                .dwLength = __constant_cpu_to_le32(sizeof(mtp_ext_prop_desc)),
-                .bcdVersion = __constant_cpu_to_le16(0x0100),
-                .wIndex = __constant_cpu_to_le16(5),
-                .wCount = __constant_cpu_to_le16(1),
-        },
-        .customProp = {
-                .dwSize = __constant_cpu_to_le32(sizeof(mtp_ext_prop_desc_property)),
-                .dwPropertyDataType = __constant_cpu_to_le32(1),
-                .wPropertyNameLength = __constant_cpu_to_le16(8),
-                .bPropertyName = {'M', 0, 'T', 0, 'P', 0, 0, 0},                //MTP
-                .dwPropertyDataLength = __constant_cpu_to_le32(22),
-                .bPropertyData = {'M', 0, 'T', 0, 'P', 0, ' ', 0, 'D', 0, 'e', 0, 'v', 0, 'i', 0, 'c', 0, 'e', 0, 0, 0},
-        //MTP Device
-        },
-};
-
-struct {
-        struct mtp_ext_prop_desc_header header;
-        struct mtp_ext_prop_desc_property customProp;
-} ptp_ext_prop_desc = {
-        .header = {
-                .dwLength = __constant_cpu_to_le32(sizeof(ptp_ext_prop_desc)),
-                .bcdVersion = __constant_cpu_to_le16(0x0100),
-                .wIndex = __constant_cpu_to_le16(5),
-                .wCount = __constant_cpu_to_le16(1),
-        },
-        .customProp = {
-                .dwSize = __constant_cpu_to_le32(sizeof(mtp_ext_prop_desc_property)),
-                .dwPropertyDataType = __constant_cpu_to_le32(1),
-                .wPropertyNameLength = __constant_cpu_to_le16(8),
-                .bPropertyName = {'P', 0, 'T', 0, 'P', 0, 0, 0},                //PTP
-                .dwPropertyDataLength = __constant_cpu_to_le32(22),
-                .bPropertyData = {'P', 0, 'T', 0, 'P', 0, ' ', 0, 'D', 0, 'e', 0, 'v', 0, 'i', 0, 'c', 0, 'e', 0, 0, 0},
-        //PTP Device
-        },
-};
-
-
-
-#define USB_MTP                 "mtp\n"
-#define USB_MTP_ACM             "mtp,acm\n"
-#define USB_MTP_ADB             "mtp,adb\n"
-#define USB_MTP_ADB_ACM "mtp,adb,acm\n"
-#define USB_MTP_ADB_UMS "mtp,adb,mass_storage\n"
-#define USB_MTP_UMS             "mtp,mass_storage\n"
-#define USB_MTP_UMS_ADB "mtp,mass_storage,adb\n"
-#define USB_PTP         "ptp\n"
-#define USB_PTP_ADB     "ptp,adb\n"
-
-
-static char * USB_MTP_FUNC[] =
-{
-	USB_MTP,
-	USB_MTP_ACM,
-	USB_MTP_ADB,
-	USB_MTP_ADB_ACM,
-	USB_MTP_UMS,
-	USB_MTP_UMS_ADB,
-	USB_MTP_ADB_UMS,
-	USB_PTP,
-	USB_PTP_ADB,
-	NULL
-};
-#endif //SHENQI_MS_OS_DESCRIPTOR
-
 /* Microsoft Extended Configuration Descriptor Header Section */
 struct mtp_ext_config_desc_header {
 	__le32	dwLength;
@@ -438,75 +341,6 @@ struct mtp_ext_config_desc_function {
 	__u8	reserved[6];
 };
 
-#ifdef SHENQI_MS_OS_DESCRIPTOR
-struct {
-        struct mtp_ext_config_desc_header       header;
-        struct mtp_ext_config_desc_function    function[3];
-} mtp_ext_config_desc = {
-        .header = {
-                .dwLength = __constant_cpu_to_le32(sizeof(mtp_ext_config_desc)),
-                .bcdVersion = __constant_cpu_to_le16(0x0100),
-                .wIndex = __constant_cpu_to_le16(4),
-                //.bCount = __constant_cpu_to_le16(1),
-                .bCount = 0x03,
-                .reserved = { 0 },
-        },
-        .function[0] =
-        {
-        .bFirstInterfaceNumber = 0,
-        .bInterfaceCount = 1,
-        .compatibleID = { 'M', 'T', 'P', 0, 0, 0, 0, 0 },
-        .subCompatibleID = { 0 },
-        .reserved = { 0 },
-        },
-        .function[1] =
-        {
-        .bFirstInterfaceNumber = 1,
-        .bInterfaceCount = 1,
-        .compatibleID = { 0 },
-        .subCompatibleID = { 0 },
-        .reserved = { 0 },
-        },
-        .function[2] =
-        {
-        .bFirstInterfaceNumber = 2,
-        .bInterfaceCount = 1,
-        .compatibleID = { 0 },
-        .subCompatibleID = { 0 },
-        .reserved = { 0 },
-        },
-};
-struct {
-        struct mtp_ext_config_desc_header       header;
-        struct mtp_ext_config_desc_function    function[3];
-} ptp_ext_config_desc = {
-        .header = {
-                .dwLength = __constant_cpu_to_le32(sizeof(ptp_ext_config_desc)),
-                .bcdVersion = __constant_cpu_to_le16(0x0100),
-                .wIndex = __constant_cpu_to_le16(4),
-                //.bCount = __constant_cpu_to_le16(1),
-                .bCount = 0x03,
-                .reserved = { 0 },
-        },
-        .function[0] =
-        {
-        .bFirstInterfaceNumber = 0,
-        .bInterfaceCount = 1,
-        .compatibleID = { 'P', 'T', 'P', 0, 0, 0, 0, 0 },
-        .subCompatibleID = { 0 },
-        .reserved = { 0 },
-        },
-        .function[1] =
-        {
-        .bFirstInterfaceNumber = 1,
-        .bInterfaceCount = 1,
-        .compatibleID = { 0 },
-        .subCompatibleID = { 0 },
-        .reserved = { 0 },
-        },
-};
-
-#else
 /* MTP Extended Configuration Descriptor */
 struct ext_mtp_desc {
 	struct mtp_ext_config_desc_header	header;
@@ -540,9 +374,6 @@ struct ext_mtp_desc ptp_ext_config_desc = {
 		.compatibleID = { 'P', 'T', 'P' },
 	},
 };
-
-
-#endif //SHENQI_MS_OS_DESCRIPTOR
 
 struct mtp_device_status {
 	__le16	wLength;
@@ -717,29 +548,20 @@ static int mtp_create_bulk_endpoints(struct mtp_dev *dev,
 	ep->driver_data = dev;		/* claim the endpoint */
 	dev->ep_intr = ep;
 
-	mtp_tx_req_len = MTP_BULK_BUFFER_SIZE;
-	mtp_tx_reqs = MTP_TX_REQ_MAX;
 retry_tx_alloc:
-#if 0
 	if (mtp_tx_req_len > MTP_BULK_BUFFER_SIZE)
 		mtp_tx_reqs = 4;
-#endif
 
 	/* now allocate requests for our endpoints */
 	for (i = 0; i < mtp_tx_reqs; i++) {
 		req = mtp_request_new(dev->ep_in,
 				mtp_tx_req_len + extra_buf_alloc);
 		if (!req) {
-			if(i>=(mtp_tx_reqs/2)){
-				mtp_tx_reqs = i;
-				break;
-			}
+			if (mtp_tx_req_len <= MTP_BULK_BUFFER_SIZE)
+				goto fail;
 			while ((req = mtp_req_get(dev, &dev->tx_idle)))
 				mtp_request_free(req, dev->ep_in);
-
-			if (mtp_tx_req_len <= MIN_BUFFER_SIZE)
-				goto fail;
-			mtp_tx_req_len /= 2;
+			mtp_tx_req_len = MTP_BULK_BUFFER_SIZE;
 			mtp_tx_reqs = MTP_TX_REQ_MAX;
 			goto retry_tx_alloc;
 		}
@@ -747,9 +569,6 @@ retry_tx_alloc:
 		mtp_req_put(dev, &dev->tx_idle, req);
 	}
 
-	printk("f_mtp-->tx buffer size:%d, buffer num:%d, extra_buf_alloc:%d\n",mtp_tx_req_len,mtp_tx_reqs,(int)extra_buf_alloc);
-
-#if 0
 	/*
 	 * The RX buffer should be aligned to EP max packet for
 	 * some controllers.  At bind time, we don't know the
@@ -758,39 +577,29 @@ retry_tx_alloc:
 	 */
 	if (mtp_rx_req_len % 1024)
 		mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
-#endif
-
-	mtp_rx_req_len = MTP_RX_BUFFER_INIT_SIZE;
 
 retry_rx_alloc:
 	for (i = 0; i < RX_REQ_MAX; i++) {
 		req = mtp_request_new(dev->ep_out, mtp_rx_req_len);
 		if (!req) {
+			if (mtp_rx_req_len <= MTP_BULK_BUFFER_SIZE)
+				goto fail;
 			for (--i; i >= 0; i--)
 				mtp_request_free(dev->rx_req[i], dev->ep_out);
-
-			if (mtp_rx_req_len <= MIN_BUFFER_SIZE)
-				goto fail;
-
-			mtp_rx_req_len /= 2;
+			mtp_rx_req_len = MTP_BULK_BUFFER_SIZE;
 			goto retry_rx_alloc;
 		}
 		req->complete = mtp_complete_out;
 		dev->rx_req[i] = req;
 	}
-	printk("f_mtp-->rx buffer size:%d, buffer num:%d\n",mtp_rx_req_len,RX_REQ_MAX);
 	for (i = 0; i < INTR_REQ_MAX; i++) {
 		req = mtp_request_new(dev->ep_intr,
 				INTR_BUFFER_SIZE + extra_buf_alloc);
-		if (!req){
-			for (--i; i >= 0; i--)
-				mtp_request_free(dev->rx_req[i], dev->ep_out);
+		if (!req)
 			goto fail;
-		}
 		req->complete = mtp_complete_intr;
 		mtp_req_put(dev, &dev->intr_idle, req);
 	}
-	printk("f_mtp-->int buffer size:%d, buffer num:%d, extra_buf_alloc:%d\n",INTR_BUFFER_SIZE,INTR_REQ_MAX,(int)extra_buf_alloc);
 
 	return 0;
 
@@ -1472,27 +1281,6 @@ static struct miscdevice mtp_device = {
 	.fops = &mtp_fops,
 };
 
-#ifdef SHENQI_MS_OS_DESCRIPTOR
-static void mtp_read_usb_functions(int functions_no, char * buff)
-{
-        struct mtp_dev *dev = _mtp_dev;
-        int i;
-
-        dev->usb_functions_no = functions_no;
-        dev->curr_mtp_func_index = 0xff;
-        memcpy(dev->usb_functions, buff, sizeof(dev->usb_functions));
-
-        for(i = 0; USB_MTP_FUNC[i]; i++)
-        {
-                if(!strcmp(dev->usb_functions, USB_MTP_FUNC[i]))
-                {
-                        dev->curr_mtp_func_index = i;
-                        break;
-                }
-        }
-}
-#endif //SHENQI_MS_OS_DESCRIPTOR
-
 static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 				const struct usb_ctrlrequest *ctrl)
 {
@@ -1521,77 +1309,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 		/* Handle MTP OS descriptor */
 		DBG(cdev, "vendor request: %d index: %d value: %d length: %d\n",
 			ctrl->bRequest, w_index, w_value, w_length);
-#ifdef SHENQI_MS_OS_DESCRIPTOR
-                if (ctrl->bRequest == 1
-                                && (ctrl->bRequestType & USB_DIR_IN)
-                                && (w_index == 5)) {
-			if (!dev->is_ptp) {
-				value = (w_length < sizeof(mtp_ext_prop_desc) ?
-						w_length : sizeof(mtp_ext_prop_desc));
-				memcpy(cdev->req->buf, &mtp_ext_prop_desc, value);
-			}else{
-				value = (w_length < sizeof(ptp_ext_prop_desc) ?
-						w_length : sizeof(ptp_ext_prop_desc));
-				memcpy(cdev->req->buf, &ptp_ext_prop_desc, value);
-			}
-		}
-		else if (ctrl->bRequest == 1
-                                && (ctrl->bRequestType & USB_DIR_IN)
-                                && (w_index == 4)) {
-            		unsigned desc_size = 0;
-                        switch(dev->curr_mtp_func_index)
-                        {
-			case 0:                 //mtp
-				desc_size = sizeof(mtp_ext_config_desc) - 2 * sizeof(struct mtp_ext_config_desc_function);
-				mtp_ext_config_desc.header.dwLength = desc_size;
-				mtp_ext_config_desc.header.bCount = 1;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &mtp_ext_config_desc, value);
-				break;
-			case 1:                 //mtp,acm       , with acm, failed so far
-			case 2:                 //mtp,adb 
-			case 4:                 //mtp,mass_storage
-				desc_size = sizeof(mtp_ext_config_desc) - sizeof(struct mtp_ext_config_desc_function);
-				mtp_ext_config_desc.header.dwLength = cpu_to_le32(desc_size);
-				mtp_ext_config_desc.header.bCount = 2;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &mtp_ext_config_desc, value);
-				break;
-			case 3:                 //mtp,adb,acm   , with acm, failed so far
-			case 5:                 //mtp,mass_storage,adb
-			case 6:         //mtp,adb,mass_storage
-				desc_size = sizeof(mtp_ext_config_desc);
-				mtp_ext_config_desc.header.dwLength = cpu_to_le32(desc_size);
-				mtp_ext_config_desc.header.bCount = 3;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &mtp_ext_config_desc, value);
-				break;
-			case 7://ptp
-				desc_size = sizeof(ptp_ext_config_desc) - sizeof(struct mtp_ext_config_desc_function);
-				ptp_ext_config_desc.header.dwLength = desc_size;
-				ptp_ext_config_desc.header.bCount = 1;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &ptp_ext_config_desc, value);
-				break;
-			case 8://ptp,adb
-				desc_size = sizeof(ptp_ext_config_desc);
-				ptp_ext_config_desc.header.dwLength = cpu_to_le32(desc_size);
-				ptp_ext_config_desc.header.bCount = 2;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &ptp_ext_config_desc, value);
-				break;
-			default:                        //unknown, 0xff
-				desc_size = sizeof(mtp_ext_config_desc) - 2 * sizeof(struct mtp_ext_config_desc_function);
-				mtp_ext_config_desc.header.dwLength = cpu_to_le32(desc_size);
-				mtp_ext_config_desc.header.bCount = 1;
-				value = (w_length < desc_size ? w_length : desc_size);
-				memcpy(cdev->req->buf, &mtp_ext_config_desc, value);
-				break;
-			}
 
-		}
-#else
-		mtp_ext_config_desc.function.bFirstInterfaceNumber = mtp_interface_desc.bInterfaceNumber;
 		if (ctrl->bRequest == 1
 				&& (ctrl->bRequestType & USB_DIR_IN)
 				&& (w_index == 4 || w_index == 5)) {
@@ -1601,20 +1319,19 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 						w_length :
 						sizeof(mtp_ext_config_desc));
 				memcpy(cdev->req->buf, &mtp_ext_config_desc,
-						value);
+									value);
 			} else {
 				value = (w_length <
 						sizeof(ptp_ext_config_desc) ?
 						w_length :
 						sizeof(ptp_ext_config_desc));
 				memcpy(cdev->req->buf, &ptp_ext_config_desc,
-						value);
+									value);
 			}
 		}
-#endif //SHENQI_MS_OS_DESCRIPTOR
 	} else if ((ctrl->bRequestType & USB_TYPE_MASK) == USB_TYPE_CLASS) {
 		DBG(cdev, "class request: %d index: %d value: %d length: %d\n",
-				ctrl->bRequest, w_index, w_value, w_length);
+			ctrl->bRequest, w_index, w_value, w_length);
 
 		if (ctrl->bRequest == MTP_REQ_CANCEL && w_index == 0
 				&& w_value == 0) {
@@ -1667,7 +1384,7 @@ static int mtp_ctrlrequest(struct usb_composite_dev *cdev,
 	return value;
 }
 
-	static int
+static int
 mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct usb_composite_dev *cdev = c->cdev;
@@ -1719,7 +1436,7 @@ mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 	return 0;
 }
 
-	static void
+static void
 mtp_function_unbind(struct usb_configuration *c, struct usb_function *f)
 {
 	struct mtp_dev	*dev = func_to_mtp(f);
@@ -1749,13 +1466,13 @@ static int mtp_function_set_alt(struct usb_function *f,
 	if (ret) {
 		dev->ep_in->desc = NULL;
 		ERROR(cdev, "config_ep_by_speed failes for ep %s, result %d\n",
-				dev->ep_in->name, ret);
+			dev->ep_in->name, ret);
 		return ret;
 	}
 	ret = usb_ep_enable(dev->ep_in);
 	if (ret) {
 		ERROR(cdev, "failed to enable ep %s, result %d\n",
-				dev->ep_in->name, ret);
+			dev->ep_in->name, ret);
 		return ret;
 	}
 
@@ -1763,14 +1480,14 @@ static int mtp_function_set_alt(struct usb_function *f,
 	if (ret) {
 		dev->ep_out->desc = NULL;
 		ERROR(cdev, "config_ep_by_speed failes for ep %s, result %d\n",
-				dev->ep_out->name, ret);
+			dev->ep_out->name, ret);
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
 	ret = usb_ep_enable(dev->ep_out);
 	if (ret) {
 		ERROR(cdev, "failed to enable ep %s, result %d\n",
-				dev->ep_out->name, ret);
+			dev->ep_out->name, ret);
 		usb_ep_disable(dev->ep_in);
 		return ret;
 	}
@@ -1871,7 +1588,7 @@ static int debug_mtp_read_stats(struct seq_file *s, void *unused)
 	}
 
 	seq_printf(s, "vfs_write(time in usec) min:%d\t max:%d\t avg:%d\n",
-			min, max, sum / iteration);
+						min, max, sum / iteration);
 	min = max = sum = iteration = 0;
 	seq_puts(s, "\n=======================\n");
 	seq_puts(s, "MTP Read Stats:\n");
@@ -1893,13 +1610,13 @@ static int debug_mtp_read_stats(struct seq_file *s, void *unused)
 	}
 
 	seq_printf(s, "vfs_read(time in usec) min:%d\t max:%d\t avg:%d\n",
-			min, max, sum / iteration);
+						min, max, sum / iteration);
 	spin_unlock_irqrestore(&dev->lock, flags);
 	return 0;
 }
 
 static ssize_t debug_mtp_reset_stats(struct file *file, const char __user *buf,
-		size_t count, loff_t *ppos)
+				 size_t count, loff_t *ppos)
 {
 	int clear_stats;
 	unsigned long flags;
@@ -1944,7 +1661,7 @@ static void mtp_debugfs_init(void)
 		return;
 
 	dent_mtp_status = debugfs_create_file("status", S_IRUGO | S_IWUSR,
-			dent_mtp, 0, &debug_mtp_ops);
+					dent_mtp, 0, &debug_mtp_ops);
 	if (!dent_mtp_status || IS_ERR(dent_mtp_status)) {
 		debugfs_remove(dent_mtp);
 		dent_mtp = NULL;
@@ -2033,7 +1750,7 @@ static void mtp_cleanup(void)
 static struct mtp_instance *to_mtp_instance(struct config_item *item)
 {
 	return container_of(to_config_group(item), struct mtp_instance,
-			func_inst.group);
+		func_inst.group);
 }
 
 static void mtp_attr_release(struct config_item *item)
@@ -2109,7 +1826,7 @@ struct usb_function_instance *alloc_inst_mtp_ptp(bool mtp_config)
 		fi_mtp->dev = _mtp_dev;
 
 	config_group_init_type_name(&fi_mtp->func_inst.group,
-			"", &mtp_func_type);
+					"", &mtp_func_type);
 
 	return  &fi_mtp->func_inst;
 }
@@ -2117,11 +1834,11 @@ EXPORT_SYMBOL_GPL(alloc_inst_mtp_ptp);
 
 static struct usb_function_instance *mtp_alloc_inst(void)
 {
-	return alloc_inst_mtp_ptp(true);
+		return alloc_inst_mtp_ptp(true);
 }
 
 static int mtp_ctrlreq_configfs(struct usb_function *f,
-		const struct usb_ctrlrequest *ctrl)
+				const struct usb_ctrlrequest *ctrl)
 {
 	return mtp_ctrlrequest(f->config->cdev, ctrl);
 }
@@ -2132,7 +1849,7 @@ static void mtp_free(struct usb_function *f)
 }
 
 struct usb_function *function_alloc_mtp_ptp(struct usb_function_instance *fi,
-		bool mtp_config)
+					bool mtp_config)
 {
 	struct mtp_instance *fi_mtp = to_fi_mtp(fi);
 	struct mtp_dev *dev;

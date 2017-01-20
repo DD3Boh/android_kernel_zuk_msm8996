@@ -6,9 +6,6 @@
 #include <scsi/scsi.h>
 #include <asm/unaligned.h>
 
-
-#define SHENQI_MAC_OS_SUPPORT
-
 #ifndef DEBUG
 #undef VERBOSE_DEBUG
 #undef DUMP_MSGS
@@ -241,9 +238,5 @@ ssize_t fsg_show_perf(struct device *dev, struct device_attribute *attr,
 				char *buf);
 ssize_t fsg_store_perf(struct device *dev, struct device_attribute *attr,
 				const char *buf, size_t count);
-
-#ifdef SHENQI_MAC_OS_SUPPORT
-int fsg_get_toc(struct fsg_lun *curlun, int msf, int format, u8 *buf);
-#endif
 
 #endif /* USB_STORAGE_COMMON_H */
