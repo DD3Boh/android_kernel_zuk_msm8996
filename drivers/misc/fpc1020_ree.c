@@ -359,11 +359,11 @@ static int fpc1020_alloc_input_dev(struct fpc1020_data *fpc1020)
 	set_bit(KEY_BACK, fpc1020->input_dev->keybit);
 	set_bit(KEY_LEFT, fpc1020->input_dev->keybit);
 	set_bit(KEY_RIGHT, fpc1020->input_dev->keybit);
-	set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
+	//set_bit(KEY_NAVI_LONG, fpc1020->input_dev->keybit);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LEFT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_RIGHT);
 	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_BACK);
-	input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
+	//input_set_capability(fpc1020->input_dev, EV_KEY, KEY_NAVI_LONG);
 
 	/* Register the input device */
 	retval = input_register_device(fpc1020->input_dev);
