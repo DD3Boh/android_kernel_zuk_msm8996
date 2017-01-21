@@ -492,7 +492,7 @@ static void gtp_pen_init(struct goodix_ts_data *ts)
     ts->pen_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
     
 #if GTP_ICS_SLOT_REPORT
-    input_mt_init_slots(ts->pen_dev, 16);               // 
+    input_mt_init_slots(ts->pen_dev, 16, 0);               // in case of "out of memory"
 #else
     ts->pen_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 #endif
@@ -1865,7 +1865,7 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 
     ts->input_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_ABS) ;
 #if GTP_ICS_SLOT_REPORT
-    input_mt_init_slots(ts->input_dev, 16);     // in case of "out of memory"
+    input_mt_init_slots(ts->input_dev, 16, 0);     // in case of "out of memory"
 #else
     ts->input_dev->keybit[BIT_WORD(BTN_TOUCH)] = BIT_MASK(BTN_TOUCH);
 #endif
