@@ -1108,9 +1108,9 @@ __limIbssSearchAndDeletePeer(tpAniSirGlobal pMac,
 					limDelSta(pMac, pStaDs,
 						false /*asynchronous*/,
 						psessionEntry);
-					limDeleteDphHashEntry(pMac,
-							pStaDs->staAddr,
-							peerIdx, psessionEntry);
+                limDeleteDphHashEntry(pMac,
+                        pStaDs->staAddr,
+                        peerIdx, psessionEntry);
 				limReleasePeerIdx(pMac, peerIdx, psessionEntry);
 				/**
 				 * Send indication to upper layers only if ADD
