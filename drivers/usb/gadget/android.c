@@ -78,7 +78,7 @@ USB_ETHERNET_MODULE_PARAMETERS();
 #ifdef CONFIG_MEDIA_SUPPORT
 USB_VIDEO_MODULE_PARAMETERS();
 #endif
-#include "debug.h"
+#include "../debug.h"
 
 MODULE_AUTHOR("Mike Lockwood");
 MODULE_DESCRIPTION("Android Composite USB Driver");
