@@ -5472,7 +5472,7 @@ static int get_device_tree_data(struct platform_device *pdev,
 {
 	struct device_node *of_node = pdev->dev.of_node;
 	struct resource *res_mem = NULL;
-	u32 *tsens_slope_data, *sensor_id, *client_id;
+	u32 *tsens_slope_data = NULL, *sensor_id, *client_id;
 	u32 *temp1_calib_offset_factor, *temp2_calib_offset_factor;
 	u32 rc = 0, i, tsens_num_sensors = 0;
 	const struct of_device_id *id;
