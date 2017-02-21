@@ -49,17 +49,13 @@ static irqreturn_t misc_hall_irq(int irq, void *data)
         /*----hall far----*/
         if(key_debug == 5)
             printk("hall-switch %d,report: far\n",HALL_GPIO);
-        input_event(hall_data->input_dev, EV_KEY, KEY_SHOP, 1);
-        input_sync(hall_data->input_dev);
-        input_event(hall_data->input_dev, EV_KEY, KEY_SHOP, 0);
+        input_event(hall_data->input_dev, EV_SW, SW_LID, 0);
         input_sync(hall_data->input_dev);
     }else{
         /*----hall near----*/
         if(key_debug == 5)
             printk("hall-switch %d,report: near!!!\n",HALL_GPIO);
-        input_event(hall_data->input_dev, EV_KEY, KEY_SPORT, 1);
-        input_sync(hall_data->input_dev);
-        input_event(hall_data->input_dev, EV_KEY, KEY_SPORT, 0);
+        input_event(hall_data->input_dev, EV_SW, SW_LID, 1);
         input_sync(hall_data->input_dev);
     }
     enable_irq(hall_data->hall_irq);
@@ -154,13 +150,11 @@ static int hall_probe(struct platform_device *pdev)
     hall_data->input_dev->name = "hall-switch";
 
     set_bit(EV_SYN, hall_data->input_dev->evbit);
-    set_bit(EV_KEY, hall_data->input_dev->evbit);
+    set_bit(EV_SW, hall_data->input_dev->evbit);
     set_bit(EV_ABS, hall_data->input_dev->evbit);
 
-    set_bit(KEY_SPORT, hall_data->input_dev->keybit);
-    input_set_capability(hall_data->input_dev, EV_KEY, KEY_SPORT);
-    set_bit(KEY_SHOP, hall_data->input_dev->keybit);
-    input_set_capability(hall_data->input_dev, EV_KEY, KEY_SHOP);
+    set_bit(SW_LID, hall_data->input_dev->swbit);
+    input_set_capability(hall_data->input_dev, EV_SW, SW_LID);
 
     /*set_bit(KEY_SPORT_B, hall_data->input_dev->keybit);
     input_set_capability(hall_data->input_dev, EV_KEY, KEY_SPORT_B);
