@@ -404,7 +404,7 @@ KBUILD_CPPFLAGS := -D__KERNEL__
 
 KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing \
                    -fno-common -Wno-implicit-function-declaration -Wno-format-security -Wno-incompatible-pointer-types -fmodulo-sched -Wno-bool-compare \
-		   -Wno-memset-transposed-args -Wno-unused-const-variable -Wno-misleading-indentation -Wno-tautological-compare \
+		   -Wno-memset-transposed-args -Wno-unused-const-variable -Wno-switch -Wno-format -Wno-misleading-indentation -Wno-tautological-compare \
                    -fgcse-after-reload -fno-delete-null-pointer-checks -ftree-loop-vectorize -ftree-loop-distribute-patterns \
                    -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -Wno-unused-const-variable -Wno-misleading-indentation -fgcse-lm \
  		   -fgcse-sm -fsched-spec-load \
