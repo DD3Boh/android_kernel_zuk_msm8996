@@ -54,6 +54,9 @@ struct gpio_keys_drvdata {
 	struct gpio_button_data data[0];
 };
 
+extern bool reset_gpio(void);
+
+
 static struct device *global_dev;
 static struct syscore_ops gpio_keys_syscore_pm_ops;
 
@@ -332,6 +335,8 @@ static struct attribute_group gpio_keys_attr_group = {
 	.attrs = gpio_keys_attrs,
 };
 
+bool home_button_status;
+
 static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 {
 	const struct gpio_keys_button *button = bdata->button;
@@ -340,7 +345,10 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	int state;
 
 	state = (__gpio_get_value(button->gpio) ? 1 : 0) ^ button->active_low;
-
+	pr_info("key gpio value = %d active_low = %d  state=%d home_button_status=%d\n" , (int)__gpio_get_value(button->gpio),button->active_low,state, home_button_status);
+	if (state == 1) {
+		home_button_status = 1;
+	}
 	if (type == EV_ABS) {
 		if (state)
 			input_event(input, type, button->code, button->value);
@@ -349,6 +357,13 @@ static void gpio_keys_gpio_report_event(struct gpio_button_data *bdata)
 	}
 	input_sync(input);
 }
+
+void reset_home_button(int i)
+{
+	home_button_status = i;
+	pr_info("key home button reset ok, home_button_status=%d",i);
+}
+
 
 static void gpio_keys_gpio_work_func(struct work_struct *work)
 {
@@ -1006,6 +1021,11 @@ static int __init gpio_keys_init(void)
 static void __exit gpio_keys_exit(void)
 {
 	platform_driver_unregister(&gpio_keys_device_driver);
+}
+
+bool home_button_pressed(void)
+{
+	return home_button_status;
 }
 
 late_initcall(gpio_keys_init);
