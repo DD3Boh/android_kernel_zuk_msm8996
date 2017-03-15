@@ -389,9 +389,10 @@ GEN_OPT_FLAGS := $(call cc-option,$(ARM_ARCH_OPT),-march=armv8-a+crypto) \
 
 OPTIMIZFLAGS    = -fgcse-las -fgcse-sm -fipa-pta -fivopts -fomit-frame-pointer \
 		  -frename-registers -fsection-anchors -ftracer \
+                  -ftree-loop-vectorize -ftree-loop-distribute-patterns -fvect-cost-model -ftree-partial-pre -fgcse-after-reload -fsched-spec-load \
 		  -ftree-loop-im -ftree-loop-ivcanon -funsafe-loop-optimizations \
 		  -funswitch-loops -fweb -pipe -ffast-math -fsingle-precision-constant \
-                  -fforce-addr -fsingle-precision-constant $(GEN_OPT_FLAGS) 
+                  -fforce-addr $(GEN_OPT_FLAGS) 
 
 CFLAGS_MODULE   =
 AFLAGS_MODULE   =
@@ -645,7 +646,8 @@ KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -O2
+
+KBUILD_CFLAGS	+= -O2 $(call cc-disable-warning,maybe-uninitialized,) $(call cc-disable-warning,array-bounds) -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds $(OPTIMIZFLAGS) $(GRAPHITE)
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
