@@ -929,6 +929,7 @@ static void cclogic_do_plug_work(struct work_struct *w)
 				flush_delayed_work(&cclogic_priv->work);	
 				cclogic_vbus_power_on(pdata,false);
 				cclogic_func_set(p,CCLOGIC_FUNC_UART);
+				cclogic_patch_state(pdata);
 				retries = 0;
 				if (wake_lock_active(&cclogic_priv->wakelock_plug)){
 					pm_runtime_put(pdata->dev);
