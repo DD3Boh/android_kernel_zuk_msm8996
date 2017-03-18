@@ -2352,7 +2352,7 @@ unsigned int max_task_load(void)
 }
 
 /* Use this knob to turn on or off HMP-aware task placement logic */
-unsigned int __read_mostly sched_enable_hmp = 0;
+unsigned int __read_mostly sched_enable_hmp = 1;
 
 /* A cpu can no longer accomodate more tasks if:
  *
@@ -2370,6 +2370,7 @@ unsigned int __read_mostly sysctl_sched_small_wakee_task_load_pct = 10;
 
 unsigned int __read_mostly sched_big_waker_task_load;
 unsigned int __read_mostly sysctl_sched_big_waker_task_load_pct = 25;
+unsigned int __read_mostly sysctl_sched_enable_power_aware = 1;
 
 /*
  * Prefer the waker CPU for sync wakee task, if the CPU has only 1 runnable
