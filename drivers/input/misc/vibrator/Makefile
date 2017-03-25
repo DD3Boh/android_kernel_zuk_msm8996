@@ -1,0 +1,1 @@
+obj-$(CONFIG_DRV2605L_HAPTICS) += drv2605l.o
