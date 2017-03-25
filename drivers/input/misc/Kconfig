@@ -845,3 +845,5 @@ config INPUT_STMVL53L0
 	 module will be called stmvl53l0.
 
 endif
+
+source "drivers/input/misc/vibrator/Kconfig"
