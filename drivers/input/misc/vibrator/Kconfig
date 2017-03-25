@@ -1,0 +1,13 @@
+menu "zuk z2pro vibrator support"
+
+config DRV2605L_HAPTICS
+	tristate "TI DRV260X haptics support"
+	depends on I2C && GPIOLIB
+	select REGMAP_I2C
+	help
+	  Say Y to enable support for the TI DRV260X haptics driver.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called drv260x-haptics.
+
+endmenu
