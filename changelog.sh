@@ -23,7 +23,7 @@ echo "		\		"
 echo "		/		"
 echo "		\		"
 echo ''
-echo " Welcome to Fire Kernel changelog script! "
+echo " Welcome to DarkMoon Kernel changelog script! "
 echo -e "${restore}"
 
 # Check the date start range is set
@@ -55,5 +55,5 @@ echo "" >> "$rdir"/changelog_$cdate.log
     fi
 done
 echo -e "${red}"
-echo "Changelog script for Fire Kernel has finished."
+echo "Changelog script for DarkMoon Kernel has finished."
 echo -e "${restore}"
