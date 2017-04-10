@@ -1,0 +1,29 @@
+# Zuk configuration options
+
+config MACH_ZUK
+	bool "ZUK device"
+	depends on ARCH_MSM
+	help
+	  Support for Zuk products
+
+config MACH_ZUK_MSM8996
+	bool "ZUK MSM8996"
+	depends on ARCH_MSM
+	select MACH_ZUK
+	help
+	  Support for MSM8996 Zuk variants
+
+menu "Zuk board selection"
+
+	config MACH_ZUK_Z2_PLUS
+		bool "ZUK_Z2_Plus_board"
+		select MACH_ZUK_MSM8996
+		help
+		  Support for Zuk Z2 Plus variant
+
+	config MACH_ZUK_Z2_ROW
+		bool "ZUK_Z2_ROW_board"
+		select MACH_ZUK_MSM8996
+		help
+		  Support for Zuk Z2_ROW variant
+endmenu
