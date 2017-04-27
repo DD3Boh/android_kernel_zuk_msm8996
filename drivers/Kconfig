@@ -214,4 +214,5 @@ source "drivers/sensors/Kconfig"
 
 source "drivers/tee/Kconfig"
 
+source "drivers/fingerprint/Kconfig"
 endmenu
