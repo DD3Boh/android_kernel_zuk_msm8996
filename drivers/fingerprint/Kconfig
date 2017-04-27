@@ -1,0 +1,11 @@
+#
+# Fingerprint driver configuration
+#
+
+menuconfig FPC1020_REE
+	tristate "FPC1020 fingerprint sensor support"
+	help
+	  The FPC1020 is a fingerprint sensor for smartphone, only manage
+	  IRQ & HW reset gpio in the REE side.
+	  If unsure, say N.
+ 
