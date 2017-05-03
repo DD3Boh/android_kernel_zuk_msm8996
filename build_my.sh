@@ -4,7 +4,7 @@ kernel_name="rebase-test"
 device_name="Z2"
 zip_name="$kernel_name-$device_name-$kernel_version.zip"
 
-export CONFIG_FILE="lineageos_z2_plus_defconfig"
+export CONFIG_FILE="noog-caf_z2_plus_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-linux-android-"
 export KBUILD_BUILD_USER="Lemoncè"
