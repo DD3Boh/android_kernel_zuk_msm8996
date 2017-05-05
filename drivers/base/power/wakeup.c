@@ -34,11 +34,7 @@ module_param(enable_bluesleep_ws, bool, 0644);
 
 #include "power.h"
 
-static bool enable_qcom_rx_wakelock_ws = true;
-module_param(enable_qcom_rx_wakelock_ws, bool, 0644);
-static bool enable_wlan_extscan_wl_ws = true;
-module_param(enable_wlan_extscan_wl_ws, bool, 0644);
-static bool enable_ipa_ws = true;
+static bool enable_ipa_ws = false;
 module_param(enable_ipa_ws, bool, 0644);
 
 /*
@@ -510,11 +506,7 @@ static void wakeup_source_activate(struct wakeup_source *ws)
 {
 	unsigned int cec;
 
-	if ((!enable_ipa_ws && !strncmp(ws->name, "IPA_WS", 6)) ||
-		(!enable_wlan_extscan_wl_ws &&
-			!strncmp(ws->name, "wlan_extscan_wl", 15)) ||
-		(!enable_qcom_rx_wakelock_ws &&
-			!strncmp(ws->name, "qcom_rx_wakelock", 16))) {
+	if (!enable_ipa_ws && !strncmp(ws->name, "IPA_WS", 6)) {
 		if (ws->active)
 			wakeup_source_deactivate(ws);
 
