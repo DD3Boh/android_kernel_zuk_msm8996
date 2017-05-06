@@ -435,8 +435,8 @@ KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs 
 		   -fno-delete-null-pointer-checks -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize \
  		   -fvect-cost-model -ftree-partial-pre -fgcse-lm -fgcse-sm -fsched-spec-load -fsingle-precision-constant -std=gnu89 \
 		   -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53
-KBUILD_AFLAGS_KERNEL :=
-KBUILD_CFLAGS_KERNEL :=
+KBUILD_AFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
+KBUILD_CFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
 KBUILD_AFLAGS_MODULE  := -DMODULE
 KBUILD_CFLAGS_MODULE  := -DMODULE
@@ -645,11 +645,13 @@ KBUILD_CFLAGS	+= $(call cc-option,-fno-delete-null-pointer-checks,)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS += -O3
-KBUILD_CFLAGS += $(call cc-disable-warning,maybe-uninitialized)
-KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds)
+KBUILD_CFLAGS += -Os
+KBUILD_CFLAGS +=$(GRAPHITE)
+KBUILD_CFLAGS +=$(OPTIMIZFLAGS)
+KBUILD_CFLAGS += $(call cc-disable-warning,maybe-uninitialized,)
+KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds) -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds -Wno-error=maybe-uninitialized -Wno-maybe-uninitialized
 KBUILD_CFLAGS += $(call cc-disable-warning,unused-function)
-KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable)
+KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable) 
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
