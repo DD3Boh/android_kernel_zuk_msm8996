@@ -1,10 +1,10 @@
 #!/bin/bash
 kernel_version=${1}
-kernel_name="rebase-test"
+kernel_name="DarkMoon"
 device_name="Z2"
 zip_name="$kernel_name-$device_name-$kernel_version.zip"
 
-export CONFIG_FILE="noog-caf_z2_plus_defconfig"
+export CONFIG_FILE="darkmoon_defconfig"
 export ARCH="arm64"
 export CROSS_COMPILE="aarch64-linux-android-"
 export KBUILD_BUILD_USER="Lemoncè"
@@ -12,10 +12,10 @@ export KBUILD_BUILD_HOST="DD3Boh"
 export TOOL_CHAIN_PATH="${HOME}/kernel/aarch64-linux-android-6.x/bin"
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export PATH=$PATH:${TOOL_CHAIN_PATH}
-export objdir="${HOME}/kernel/zuk/obj"
-export sourcedir="${HOME}/kernel/zuk/rebase"
-export anykernel="${HOME}/kernel/zuk/anykernel"
-release_folder="${HOME}/kernel/zuk/releases"
+export objdir="${HOME}/kernel/zuk/darkmoon-obj"
+export sourcedir="${HOME}/kernel/zuk/DarkMoon"
+export anykernel="${HOME}/kernel/zuk/darkmoon-anykernel"
+release_folder="${HOME}/kernel/zuk/darkmoon-releases"
 compile() {
   make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j4
   make O=$objdir -j6
@@ -59,10 +59,6 @@ export_it(){
 cp -r $zip_name ../darkmoon-releases/$zip_name
 cd $releases_folder
 }
-push_it(){
-cd ..
-. push
-}
 turn_back(){
 cd $sourcedir
 }
@@ -72,8 +68,7 @@ module_stock
 delete_zip
 build_package
 make_name
-#export_it
-#push_it
+export_it
 turn_back
 #dtbuild
 #cp $objdir/arch/arm64/boot/zImage $sourcedir/zImage
