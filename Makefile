@@ -376,17 +376,6 @@ CHECK		= sparse
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 
-# fall back to -march=armv8-a+crypto in case the compiler isn't compatible
-# with -mcpu and -mtune
-ARM_ARCH_OPT := -mcpu=cortex-a72.cortex-a53+crypto
-GEN_OPT_FLAGS := $(call cc-option,$(ARM_ARCH_OPT),-march=armv8-a+crypto) \
- -g0 \
- -DNDEBUG \
- -fomit-frame-pointer \
- -fmodulo-sched \
- -fmodulo-sched-allow-regmoves \
- -fivopts
-
 OPTIMIZFLAGS    = -fgcse-las -fgcse-sm -fipa-pta -fivopts -fomit-frame-pointer \
 		  -frename-registers -fsection-anchors -ftracer \
                   -ftree-loop-vectorize -ftree-loop-distribute-patterns -fvect-cost-model -ftree-partial-pre -fgcse-after-reload -fsched-spec-load \
