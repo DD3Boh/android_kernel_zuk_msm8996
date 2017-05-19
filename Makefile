@@ -376,21 +376,57 @@ CHECK		= sparse
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
 
-OPTIMIZFLAGS    = -fgcse-las -fgcse-sm -fipa-pta -fivopts -fomit-frame-pointer \
-		  -frename-registers -fsection-anchors -ftracer \
-                  -ftree-loop-vectorize -ftree-loop-distribute-patterns -fvect-cost-model -ftree-partial-pre -fgcse-after-reload -fsched-spec-load \
-		  -ftree-loop-im -ftree-loop-ivcanon -funsafe-loop-optimizations \
-		  -funswitch-loops -fweb -pipe -ffast-math -fsingle-precision-constant \
-                  -fforce-addr $(GEN_OPT_FLAGS) 
+OPTIMIZFLAGS    =  -fno-common \
+		   -fno-strict-aliasing \
+                   -fgcse-after-reload \
+		   -fno-delete-null-pointer-checks \
+		   -ftree-loop-vectorize \
+		   -ftree-loop-distribute-patterns \
+                   -ftree-slp-vectorize \
+		   -fvect-cost-model \
+		   -ftree-partial-pre \
+		   -fgcse-lm \
+ 		   -fgcse-sm -fsched-spec-load \
+                   -fmodulo-sched-allow-regmoves \
+		   -funswitch-loops \
+		   -fpredictive-commoning \
+		   -fsingle-precision-constant \
+		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
+		   -funswitch-loops \
+		   -fpredictive-commoning \
+		   -fgcse-after-reload \
+		   -fno-delete-null-pointer-checks \
+		   -ftree-loop-vectorize \
+		   -ftree-loop-distribute-patterns \
+		   -ftree-slp-vectorize \
+ 		   -fvect-cost-model \
+		   -ftree-partial-pre \
+		   -fgcse-lm -fgcse-sm \
+		   -fmodulo-sched \
+		   -fsched-spec-load \
+		   -fsingle-precision-constant $(GEN_OPT_FLAGS)
 
 GRAPHITE	= -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block
 CFLAGS_MODULE   = $(GRAPHITE)
 AFLAGS_MODULE   = $(GRAPHITE)
 LDFLAGS_MODULE  = --strip-debug
-CFLAGS_KERNEL	= $(GRAPHITE) -fmodulo-sched -fmodulo-sched-allow-regmoves -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -fgcse-after-reload -fgcse-lm -fgcse-sm -fsched-spec-load -ffast-math -fsingle-precision-constant -fpredictive-commoning
-AFLAGS_KERNEL	=  $(GRAPHITE)
+CFLAGS_KERNEL	= $(OPTIMIZFLAGS) -fpredictive-commoning $(GRAPHITE)
+AFLAGS_KERNEL	= $(OPTIMIZFLAGS) $(GRAPHITE)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 CFLAGS_KCOV	= -fsanitize-coverage=trace-pc
+
+O3-ADDS-ONLY =     -finline-functions \
+		   -funswitch-loops \
+		   -fpredictive-commoning \
+		   -fgcse-after-reload \
+		   -ftree-loop-vectorize \
+		   -ftree-loop-distribute-patterns \
+		   -fsplit-paths \
+		   -ftree-slp-vectorize \
+		   -fvect-cost-model \
+		   -ftree-partial-pre \
+		   -fpeel-loops \
+		   -fipa-cp-clone
 
 # Use USERINCLUDE when you must reference the UAPI directories only.
 USERINCLUDE    := \
@@ -411,19 +447,25 @@ LINUXINCLUDE    := \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing \
-                   -fno-common -Wno-implicit-function-declaration -Wno-format-security -Wno-incompatible-pointer-types -fmodulo-sched -Wno-bool-compare \
-		   -Wno-memset-transposed-args -Wno-unused-const-variable -Wno-misleading-indentation -Wno-tautological-compare \
-                   -fgcse-after-reload -fno-delete-null-pointer-checks -ftree-loop-vectorize -ftree-loop-distribute-patterns \
-                   -ftree-slp-vectorize -fvect-cost-model -ftree-partial-pre -Wno-misleading-indentation -fgcse-lm \
- 		   -fgcse-sm -fsched-spec-load \
-                   -fmodulo-sched-allow-regmoves -ffast-math -funswitch-loops -fpredictive-commoning -fsingle-precision-constant \
-		   -Wno-declaration-after-statement -Wno-format-extra-args -Wno-int-conversion -Wno-discarded-qualifiers -Wno-logical-not-parentheses \
-		   -fmodulo-sched -fmodulo-sched-allow-regmoves -ffast-math \
-		   -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
-		   -fno-delete-null-pointer-checks -ftree-loop-vectorize -ftree-loop-distribute-patterns -ftree-slp-vectorize \
- 		   -fvect-cost-model -ftree-partial-pre -fgcse-lm -fgcse-sm -fsched-spec-load -fsingle-precision-constant -std=gnu89 \
-		   -mcpu=cortex-a57.cortex-a53 -mtune=cortex-a57.cortex-a53
+KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+		   -Wno-implicit-function-declaration \
+		   -Wno-format-security \
+		   -Wno-incompatible-pointer-types \
+		   -Wno-bool-compare \
+		   -Wno-memset-transposed-args \
+		   -Wno-unused-const-variable \
+		   -Wno-misleading-indentation \
+		   -Wno-tautological-compare \
+		   -Wno-declaration-after-statement \
+		   -Wno-format-extra-args \
+		   -Wno-int-conversion \
+		   -Wno-discarded-qualifiers \
+		   -Wno-logical-not-parentheses \
+		   -Wno-misleading-indentation \
+		   -std=gnu89 \
+		   -mcpu=cortex-a57.cortex-a53 \
+		   -mtune=cortex-a57.cortex-a53
+
 KBUILD_AFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
 KBUILD_CFLAGS_KERNEL := $(OPTIMIZFLAGS) $(GRAPHITE)
 KBUILD_AFLAGS   := -D__ASSEMBLY__
@@ -637,9 +679,10 @@ KBUILD_AFLAGS	+= $(call cc-option,-fno-PIE)
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS += -Os
-KBUILD_CFLAGS +=$(GRAPHITE)
-KBUILD_CFLAGS +=$(OPTIMIZFLAGS)
+KBUILD_CFLAGS += -Os 
+KBUILD_CFLAGS += $(GRAPHITE)
+KBUILD_CFLAGS += $(OPTIMIZFLAGS)
+KBUILD_CFLAGS += $(O3-ADDS-ONLY)
 KBUILD_CFLAGS += $(call cc-disable-warning,maybe-uninitialized,)
 KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds) -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds -Wno-error=maybe-uninitialized -Wno-maybe-uninitialized
 KBUILD_CFLAGS += $(call cc-disable-warning,unused-function)
