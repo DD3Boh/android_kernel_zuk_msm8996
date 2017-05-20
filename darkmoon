@@ -44,10 +44,12 @@ dtbuild(){
   cd $sourcedir
   ./tools/dtbToolCM -2 -o $objdir/arch/arm64/boot/dt.img -s 4096 -p $objdir/scripts/dtc/ $objdir/arch/arm64/boot/dts/
 }
-delete_zip(){
+delete_previous(){
   cd $anykernel
   find . -name "*.zip" -type f
   find . -name "*.zip" -type f -delete
+  find . -name "*.md5" -type f
+  find . -name "*.md5" -type f -delete
 }
 build_package(){
   zip -r9 UPDATE-AnyKernel2.zip * -x README UPDATE-AnyKernel2.zip
@@ -55,8 +57,12 @@ build_package(){
 make_name(){
   mv UPDATE-AnyKernel2.zip $zip_name
 }
+make_md5(){
+  md5sum $zip_name > $zip_name.md5
+}
 export_it(){
 cp -r $zip_name ../darkmoon-releases/$zip_name
+cp -r $zip_name.md5 ../darkmoon-releases/$zip_name.md5
 cd $releases_folder
 }
 turn_back(){
@@ -65,9 +71,10 @@ cd $sourcedir
 #clean
 compile
 module_stock
-delete_zip
+delete_previous
 build_package
 make_name
+make_md5
 export_it
 turn_back
 #dtbuild
