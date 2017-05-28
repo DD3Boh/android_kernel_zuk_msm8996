@@ -16,6 +16,7 @@ export objdir="${HOME}/kernel/zuk/darkmoon-obj"
 export sourcedir="${HOME}/kernel/zuk/DarkMoon"
 export anykernel="${HOME}/kernel/zuk/darkmoon-anykernel"
 release_folder="${HOME}/kernel/zuk/darkmoon-releases"
+experimental_builds="$release_folder/Experimental-builds"
 compile() {
   make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j4
   make O=$objdir -j6
@@ -61,22 +62,28 @@ make_md5(){
   md5sum $zip_name > $zip_name.md5
 }
 export_it(){
-cp -r $zip_name ../darkmoon-releases/$zip_name
-cp -r $zip_name.md5 ../darkmoon-releases/$zip_name.md5
-cd $releases_folder
+cp -r $anykernel/$zip_name $experimental_builds/$zip_name
+cp -r $anykernel/$zip_name.md5 $experimental_builds/$zip_name.md5
+cd $release_folder
 }
 turn_back(){
 cd $sourcedir
 }
-#clean
+
 compile
 module_stock
 delete_previous
 build_package
 make_name
 make_md5
-export_it
+
+# automatically push the experimental builds
+if [ "${2}" == "-p" ]; then 
+	export_it
+	cd $release_folder
+	git add -A
+	git commit -m "Push $kernel_version build"
+	git push origin HEAD:DarkMoon-n
+fi;
+
 turn_back
-#dtbuild
-#cp $objdir/arch/arm64/boot/zImage $sourcedir/zImage
-#cp $objdir/arch/arm64/boot/dt.img.lz4 $sourcedir/dt.img
