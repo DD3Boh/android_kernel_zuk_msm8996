@@ -200,6 +200,4 @@ source "drivers/firmware/Kconfig"
 
 source "drivers/bif/Kconfig"
 
-source "drivers/gud/Kconfig"
-
 endmenu
