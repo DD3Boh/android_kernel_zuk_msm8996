@@ -33,14 +33,6 @@ module_stock(){
  ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded $anykernel/modules/*
   cp -rf $objdir/arch/arm64/boot/Image.gz-dtb $anykernel/zImage
 }
-module_cm(){
-  rm -rf $anykernel/modules/
-  mkdir $anykernel/modules
-  find $objdir -name '*.ko' -exec cp -av {} $anykernel/modules/ \;
-  # strip modules
- ${TOOL_CHAIN_PATH}/${CROSS_COMPILE}strip --strip-unneeded $anykernel/modules/*
-  cp -rf $objdir/arch/arm64/boot/Image.gz-dtb $anykernel/zImage
-}
 dtbuild(){
   cd $sourcedir
   ./tools/dtbToolCM -2 -o $objdir/arch/arm64/boot/dt.img -s 4096 -p $objdir/scripts/dtc/ $objdir/arch/arm64/boot/dts/
