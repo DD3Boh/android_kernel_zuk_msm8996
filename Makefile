@@ -378,16 +378,16 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 
 OPTIMIZFLAGS    =  -fno-common \
 		   -fno-strict-aliasing \
-                   -fgcse-after-reload \
+           -fgcse-after-reload \
 		   -fno-delete-null-pointer-checks \
 		   -ftree-loop-vectorize \
 		   -ftree-loop-distribute-patterns \
-                   -ftree-slp-vectorize \
+           -ftree-slp-vectorize \
 		   -fvect-cost-model \
 		   -ftree-partial-pre \
 		   -fgcse-lm \
  		   -fgcse-sm -fsched-spec-load \
-                   -fmodulo-sched-allow-regmoves \
+           -fmodulo-sched-allow-regmoves \
 		   -funswitch-loops \
 		   -fpredictive-commoning \
 		   -fsingle-precision-constant \
