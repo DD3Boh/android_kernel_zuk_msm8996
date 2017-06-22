@@ -389,7 +389,7 @@ OPTIMIZFLAGS    =  -fno-common \
  		   -fgcse-sm -fsched-spec-load \
 		   -fmodulo-sched-allow-regmoves \
 		   -fpredictive-commoning \
-		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
+		   -fmodulo-sched-allow-regmoves \
 		   -fsingle-precision-constant $(GEN_OPT_FLAGS)
 
 GRAPHITE	= -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block
@@ -691,7 +691,7 @@ KBUILD_CFLAGS += $(GRAPHITE)
 KBUILD_CFLAGS += $(OPTIMIZFLAGS)
 KBUILD_CFLAGS += $(O3-ADDS-ONLY)
 KBUILD_CFLAGS += $(call cc-disable-warning,maybe-uninitialized,)
-KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds) -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds -Wno-error=maybe-uninitialized -Wno-maybe-uninitialized
+KBUILD_CFLAGS += $(call cc-disable-warning,array-bounds) -fmodulo-sched-allow-regmoves -fno-tree-vectorize -Wno-array-bounds -Wno-error=maybe-uninitialized -Wno-maybe-uninitialized
 KBUILD_CFLAGS += $(call cc-disable-warning,unused-function)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-variable) 
 endif
