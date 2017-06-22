@@ -6,19 +6,18 @@ zip_name="$kernel_name-$device_name-$kernel_version.zip"
 
 export CONFIG_FILE="darkmoon_defconfig"
 export ARCH="arm64"
-export CROSS_COMPILE="aarch64-linux-gnu-"
 export KBUILD_BUILD_USER="DD3Boh"
 export KBUILD_BUILD_HOST="LemoncèHouse"
-export TOOL_CHAIN_PATH="${HOME}/kernel/aarch64-linux-gnu-7.x/bin"
+export TOOLCHAIN_PATH="${HOME}/kernel/aarch64-linux-gnu-7.x"
+export CROSS_COMPILE=$TOOLCHAIN_PATH/bin/aarch64-linux-gnu-
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
-export PATH=$PATH:${TOOL_CHAIN_PATH}
 export objdir="${HOME}/kernel/zuk/darkmoon-obj"
 export sourcedir="${HOME}/kernel/zuk/DarkMoon"
 export anykernel="${HOME}/kernel/zuk/darkmoon-anykernel"
 release_folder="${HOME}/kernel/zuk/darkmoon-releases"
 experimental_builds="$release_folder/Experimental-builds"
 compile() {
-  make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j8
+  make O=$objdir ARCH=arm64  $CONFIG_FILE -j8
   make O=$objdir -j8
 }
 clean() {
