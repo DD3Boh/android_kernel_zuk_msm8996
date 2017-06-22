@@ -378,32 +378,18 @@ CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 
 OPTIMIZFLAGS    =  -fno-common \
 		   -fno-strict-aliasing \
-           -fgcse-after-reload \
-		   -fno-delete-null-pointer-checks \
-		   -ftree-loop-vectorize \
-		   -ftree-loop-distribute-patterns \
-           -ftree-slp-vectorize \
-		   -fvect-cost-model \
-		   -ftree-partial-pre \
-		   -fgcse-lm \
- 		   -fgcse-sm -fsched-spec-load \
-           -fmodulo-sched-allow-regmoves \
-		   -funswitch-loops \
-		   -fpredictive-commoning \
-		   -fsingle-precision-constant \
-		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
-		   -funswitch-loops \
-		   -fpredictive-commoning \
 		   -fgcse-after-reload \
 		   -fno-delete-null-pointer-checks \
 		   -ftree-loop-vectorize \
 		   -ftree-loop-distribute-patterns \
 		   -ftree-slp-vectorize \
- 		   -fvect-cost-model \
+		   -fvect-cost-model \
 		   -ftree-partial-pre \
-		   -fgcse-lm -fgcse-sm \
-		   -fmodulo-sched \
-		   -fsched-spec-load \
+		   -fgcse-lm \
+ 		   -fgcse-sm -fsched-spec-load \
+		   -fmodulo-sched-allow-regmoves \
+		   -fpredictive-commoning \
+		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
 		   -fsingle-precision-constant $(GEN_OPT_FLAGS)
 
 GRAPHITE	= -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block
