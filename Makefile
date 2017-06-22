@@ -448,6 +448,13 @@ KBUILD_CFLAGS   := $(GRAPHITE) -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs 
 		   -Wno-discarded-qualifiers \
 		   -Wno-logical-not-parentheses \
 		   -Wno-misleading-indentation \
+		   -Wno-switch -Wno-error=switch-unreachable -Wno-switch-unreachable \
+		   -Wno-int-in-bool-context \
+		   -Wno-format-overflow \
+		   -Wno-parentheses \
+		   -Wno-memset-elt-size \
+		   -Wno-bool-operation \
+		   -Wno-format \
 		   -std=gnu89 
 
 # Optimization for Kryo
