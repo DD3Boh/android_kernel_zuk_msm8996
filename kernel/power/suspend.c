@@ -43,7 +43,7 @@ static DECLARE_WAIT_QUEUE_HEAD(suspend_freeze_wait_head);
 enum freeze_state __read_mostly suspend_freeze_state;
 static DEFINE_SPINLOCK(suspend_freeze_lock);
 
-#ifdef CONFIG_MACH_MSM8996_15801
+#ifdef CONFIG_PRODUCT_Z2_PLUS
 extern void thaw_fingerprintd(void);
 #endif
 
@@ -391,7 +391,7 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 
  Platform_wake:
 	platform_resume_noirq(state);
-#ifdef CONFIG_MACH_MSM8996_15801
+#ifdef CONFIG_PRODUCT_Z2_PLUS
 	thaw_fingerprintd();
 #endif
 	dpm_resume_noirq(PMSG_RESUME);
