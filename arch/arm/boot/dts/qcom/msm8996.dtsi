@@ -64,6 +64,7 @@
 			reg = <0x0 0x0>;
 			qcom,limits-info = <&mitigation_profile0>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea0>;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>; 
 			next-level-cache = <&L2_0>;
@@ -87,6 +88,7 @@
 			reg = <0x0 0x1>;
 			qcom,limits-info = <&mitigation_profile1>;
 			enable-method = "psci";
+			efficiency = <1024>;
 			qcom,ea = <&ea1>;
 			sched-energy-costs = <&CPU_COST_0 &CLUSTER_COST_0>; 
 			next-level-cache = <&L2_0>;
@@ -105,6 +107,7 @@
 			reg = <0x0 0x100>;
 			qcom,limits-info = <&mitigation_profile2>;
 			enable-method = "psci";
+			efficiency = <1536>;
 			qcom,ea = <&ea2>;
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>; 
 			next-level-cache = <&L2_1>;
@@ -128,6 +131,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			qcom,limits-info = <&mitigation_profile3>;
+			efficiency = <1536>;
 			qcom,ea = <&ea3>;
 			sched-energy-costs = <&CPU_COST_1 &CLUSTER_COST_1>; 
 			next-level-cache = <&L2_1>;
