@@ -17,11 +17,11 @@ export anykernel="${HOME}/kernel/zuk/darkmoon-anykernel"
 release_folder="${HOME}/kernel/zuk/darkmoon-releases"
 experimental_builds="$release_folder/Experimental-builds"
 compile() {
-  make O=$objdir ARCH=arm64  $CONFIG_FILE -j8
-  make O=$objdir -j8
+  make O=$objdir ARCH=arm64  $CONFIG_FILE -j24
+  make O=$objdir -j24
 }
 clean() {
-  make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j8
+  make O=$objdir ARCH=arm64 CROSS_COMPILE=${TOOL_CHAIN_PATH}/${CROSS_COMPILE}  $CONFIG_FILE -j24
   make O=$objdir mrproper
 }
 module_stock(){
