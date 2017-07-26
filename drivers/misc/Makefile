@@ -68,3 +68,11 @@ obj-$(CONFIG_TI_DRV2667) += ti_drv2667.o
 obj-$(CONFIG_USB_EXT_TYPE_C_PERICOM)	+= type-c-pericom.o
 obj-$(CONFIG_USB_EXT_TYPE_C_TI)		+= type-c-ti.o
 obj-$(CONFIG_QPNP_MISC) 	+= qpnp-misc.o
+obj-$(CONFIG_CCLOGIC)           += cclogic/
+obj-y += le_rkm.o
+
+#sensors add for MAX86100
+obj-$(CONFIG_SENSORS_SYSFS)	+= sensors_core.o
+obj-$(CONFIG_SENSORS_MAX86X00)	+= max86x00.o
+
+obj-y += msm_secboot.o
