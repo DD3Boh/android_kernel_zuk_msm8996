@@ -1062,6 +1062,89 @@ qpnp_config_pull(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 	return rc;
 }
 
+/*
+set the emergent mode by press power key+vol down 7 seconds
+       S1 TIEMR: 6s
+       S2 TIMER: 1s
+       S2 CNTL : warm reset
+       S2 CNTL2: enable
+*/
+static int qpnp_config_emergent_restart(int on)
+{
+       struct qpnp_pon *pon = sys_reset_dev;
+       int rc = 0;
+
+       if (!pon) {
+               pr_err("%s:qpnp power-on driver is not initialized\n",__func__);
+               return -EPROBE_DEFER;
+       }
+
+       if(1 == on){
+               /* set the s1 timer 6s */
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S1_TIMER(pon),
+                                       QPNP_PON_S1_TIMER_MASK, 0xE);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S1_TIMER(pon), rc);
+
+               /* set the s2 timer 1s */
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_TIMER(pon),
+                                       QPNP_PON_S2_TIMER_MASK, 6);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_TIMER(pon), rc);
+
+               /* set the cntl is warm restart */
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL(pon),
+                                       QPNP_PON_S2_CNTL_TYPE_MASK, 1);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL(pon), rc);
+
+               /* set the cntl2 is enable*/
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon),
+                                       QPNP_PON_S2_CNTL_EN, QPNP_PON_S2_CNTL_EN);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon), rc);
+       }else if (0 == on){
+               /* set the cntl2 is disable*/
+               rc = qpnp_pon_masked_write(pon, QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon),
+                                       QPNP_PON_S2_CNTL_EN, 0);
+               if (rc)
+                       dev_err(&pon->spmi->dev,
+                                       "Unable to write to addr=%x, rc(%d)\n",
+                                       QPNP_PON_KPDPWR_RESIN_S2_CNTL2(pon), rc);
+       }
+       pr_info("%s: config emergent restart(%d)\n",__func__, on);
+       return rc;
+}
+
+extern int is_testmode;
+static int emergent_restart;
+static int emergent_restart_set(const char *val, struct kernel_param *kp)
+{
+       int ret;
+
+       ret = param_set_int(val, kp);
+
+       if (ret)
+               return ret;
+
+       if (!is_testmode)
+               qpnp_config_emergent_restart(emergent_restart&0x1);
+       else
+               pr_info("%s:in testmode, ignore this setting\n",__func__);
+
+       return 0;
+}
+module_param_call(emergent_restart, emergent_restart_set, param_get_int, &emergent_restart, 0644);
+
+
 static int
 qpnp_config_reset(struct qpnp_pon *pon, struct qpnp_pon_config *cfg)
 {
