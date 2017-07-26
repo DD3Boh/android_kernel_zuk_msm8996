@@ -1767,7 +1767,7 @@ static ssize_t gtp_gesture_wakeup_store(struct device *dev,
 		gesture_enabled = 1;
 	else 
 		gesture_enabled = 0;
-		return count;
+	return count;
 
 }
 #endif

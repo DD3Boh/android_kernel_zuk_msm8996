@@ -232,10 +232,11 @@ static int headset_standard_get_parm_set(const char *val, struct kernel_param *k
 	if (1 == headset_standard_get) {
 		if (-1 == gnd_mic_gpio_state)
 			headset_type_standard = 0;
-		else
+		else {
 			headset_type_standard = gnd_mic_gpio_state;
 			printk(KERN_INFO "%s enter, headset_type_standard = %d\n",
 			__func__, headset_type_standard);
+        }
 	} else {
 		printk(KERN_INFO "enter %s, clear the headset/headphone type\n", __func__);
 			headset_type_standard = -1;

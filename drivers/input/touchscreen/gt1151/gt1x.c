@@ -418,10 +418,10 @@ static void gt1x_remove_gpio_and_power(void)
 		regulator_put(vdd_ana);
 #endif
 
-	if (gt1x_i2c_client && gt1x_i2c_client->irq)
+	if (gt1x_i2c_client && gt1x_i2c_client->irq) {
 		free_irq(gt1x_i2c_client->irq, gt1x_i2c_client);
 		irq_is_free = 1;
-	
+	}
 }
 
 
