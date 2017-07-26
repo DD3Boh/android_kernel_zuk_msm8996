@@ -29,6 +29,7 @@ struct tsens_device {
 	uint32_t			sensor_num;
 };
 
+#define SUPPORT_CPU_TEMP_MONITOR
 #if defined(CONFIG_THERMAL_TSENS8974)
 /**
  * tsens_is_ready() - Clients can use this API to check if the TSENS device
@@ -111,6 +112,9 @@ int tsens_get_mtc_zone_history(unsigned int zone , void *zone_hist);
  *		0 on success else error code on error.
  */
 int tsens_get_temp(struct tsens_device *dev, unsigned long *temp);
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+int get_tsens_temp(uint32_t id, unsigned long *temp);
+#endif
 #else
 static inline int tsens_is_ready(void)
 { return -ENXIO; }
@@ -134,6 +138,10 @@ static inline int tsens_get_temp(struct tsens_device *dev,
 { return -ENXIO; }
 static inline int tsens_get_mtc_zone_history(unsigned int zone, void *zone_hist)
 { return -ENXIO; }
+#ifdef SUPPORT_CPU_TEMP_MONITOR
+static int get_tsens_temp(uint32_t id, unsigned long *temp)
+{ return -ENXIO; }
+#endif
 #endif
 
 #endif /*MSM_TSENS_H */
