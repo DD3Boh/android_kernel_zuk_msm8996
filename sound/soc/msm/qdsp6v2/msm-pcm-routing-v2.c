@@ -33,6 +33,7 @@
 #include <sound/pcm_params.h>
 #include <sound/q6core.h>
 #include <sound/audio_cal_utils.h>
+#include <sound/msm-dts-eagle.h>
 #include <sound/audio_effects.h>
 #include <sound/hwdep.h>
 
@@ -46,6 +47,12 @@
 #include "sound/q6lsm.h"
 
 static int get_cal_path(int path_type);
+
+#define EC_PORT_ID_PRIMARY_MI2S_TX    1
+#define EC_PORT_ID_SECONDARY_MI2S_TX  2
+#define EC_PORT_ID_TERTIARY_MI2S_TX   3
+#define EC_PORT_ID_QUATERNARY_MI2S_TX 4
+#define EC_PORT_ID_SLIMBUS_1_TX       5
 
 static struct mutex routing_lock;
 
@@ -169,6 +176,10 @@ static void msm_pcm_routing_cfg_pp(int port_id, int copp_idx, int topology,
 					__func__, topology, port_id, rc);
 		}
 		break;
+	case ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX:
+		pr_debug("%s: DTS_EAGLE_COPP_TOPOLOGY_ID\n", __func__);
+		msm_dts_eagle_init_post(port_id, copp_idx);
+		break;
 	case ADM_CMD_COPP_OPEN_TOPOLOGY_ID_AUDIOSPHERE:
 		pr_debug("%s: TOPOLOGY_ID_AUDIOSPHERE\n", __func__);
 		msm_qti_pp_asphere_init(port_id, copp_idx);
@@ -199,6 +210,10 @@ static void msm_pcm_routing_deinit_pp(int port_id, int topology)
 			pr_debug("%s: DOLBY_ADM_COPP_TOPOLOGY_ID\n", __func__);
 			msm_dolby_dap_deinit(port_id);
 		}
+		break;
+	case ADM_CMD_COPP_OPEN_TOPOLOGY_ID_DTS_HPX:
+		pr_debug("%s: DTS_EAGLE_COPP_TOPOLOGY_ID\n", __func__);
+		msm_dts_eagle_deinit_post(port_id, topology);
 		break;
 	case ADM_CMD_COPP_OPEN_TOPOLOGY_ID_AUDIOSPHERE:
 		pr_debug("%s: TOPOLOGY_ID_AUDIOSPHERE\n", __func__);
@@ -1969,11 +1984,6 @@ static int msm_routing_ec_ref_rx_put(struct snd_kcontrol *kcontrol,
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
 	struct snd_soc_dapm_update *update = NULL;
 
-	if (mux >= e->items) {
-		pr_err("%s: Invalid mux value %d\n", __func__, mux);
-		return -EINVAL;
-	}
-
 	mutex_lock(&routing_lock);
 	switch (ucontrol->value.integer.value[0]) {
 	case 0:
@@ -2123,8 +2133,8 @@ static int msm_routing_ext_ec_get(struct snd_kcontrol *kcontrol,
 static int msm_routing_ext_ec_put(struct snd_kcontrol *kcontrol,
 				  struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_dapm_widget_list *wlist =
-					dapm_kcontrol_get_wlist(kcontrol);
+       struct snd_soc_dapm_widget_list *wlist =
+                                       dapm_kcontrol_get_wlist(kcontrol);
 	struct snd_soc_dapm_widget *widget = wlist->widgets[0];
 	int mux = ucontrol->value.enumerated.item[0];
 	struct soc_enum *e = (struct soc_enum *)kcontrol->private_value;
@@ -2133,43 +2143,40 @@ static int msm_routing_ext_ec_put(struct snd_kcontrol *kcontrol,
 	uint16_t ext_ec_ref_port_id;
 	struct snd_soc_dapm_update *update = NULL;
 
-	if (mux >= e->items) {
-		pr_err("%s: Invalid mux value %d\n", __func__, mux);
-		return -EINVAL;
-	}
-
 	mutex_lock(&routing_lock);
-	msm_route_ext_ec_ref = ucontrol->value.integer.value[0];
 
-	switch (msm_route_ext_ec_ref) {
-	case EXT_EC_REF_PRI_MI2S_TX:
+	switch (ucontrol->value.integer.value[0]) {
+
+	case EC_PORT_ID_PRIMARY_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_PRIMARY_MI2S_TX;
+		msm_route_ext_ec_ref = 1;
+		state = true;
 		break;
-	case EXT_EC_REF_SEC_MI2S_TX:
+	case EC_PORT_ID_SECONDARY_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_SECONDARY_MI2S_TX;
+		msm_route_ext_ec_ref = 2;
+		state = true;
 		break;
-	case EXT_EC_REF_TERT_MI2S_TX:
+	case EC_PORT_ID_TERTIARY_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_TERTIARY_MI2S_TX;
+		msm_route_ext_ec_ref = 3;
+		state = true;
 		break;
-	case EXT_EC_REF_QUAT_MI2S_TX:
+	case EC_PORT_ID_QUATERNARY_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_QUATERNARY_MI2S_TX;
+		msm_route_ext_ec_ref = 4;
+		state = true;
 		break;
-	case EXT_EC_REF_QUIN_MI2S_TX:
-		ext_ec_ref_port_id = AFE_PORT_ID_QUINARY_MI2S_TX;
-		break;
-	case EXT_EC_REF_SLIM_1_TX:
+	case EC_PORT_ID_SLIMBUS_1_TX:
 		ext_ec_ref_port_id = SLIMBUS_1_TX;
-		break;
-	case EXT_EC_REF_NONE:
+		msm_route_ext_ec_ref = 5;
+		state = true;
 	default:
 		ext_ec_ref_port_id = AFE_PORT_INVALID;
+		msm_route_ext_ec_ref = 0;
 		state = false;
 		break;
 	}
-
-	pr_debug("%s: val = %d ext_ec_ref_port_id = 0x%0x state = %d\n",
-		__func__, msm_route_ext_ec_ref, ext_ec_ref_port_id, state);
-
 	if (!voc_set_ext_ec_ref(ext_ec_ref_port_id, state)) {
 		mutex_unlock(&routing_lock);
 		snd_soc_dapm_mux_update_power(widget->dapm, kcontrol, mux, e, update);
@@ -6119,7 +6126,7 @@ int msm_routing_get_rms_value_control(struct snd_kcontrol *kcontrol,
 	int *update_param_value;
 	uint32_t param_length = sizeof(uint32_t);
 	uint32_t param_payload_len = RMS_PAYLOAD_LEN * sizeof(uint32_t);
-	param_value = kzalloc(param_length + param_payload_len, GFP_KERNEL);
+	param_value = kzalloc(param_length, GFP_KERNEL);
 	if (!param_value) {
 		pr_err("%s, param memory alloc failed\n", __func__);
 		return -ENOMEM;
@@ -8422,7 +8429,6 @@ static const struct snd_soc_dapm_route intercon[] = {
 	{"VOIP_UL", NULL, "VOC_EXT_EC MUX"},
 	{"VoLTE_UL", NULL, "VOC_EXT_EC MUX"},
 	{"VOICE2_UL", NULL, "VOC_EXT_EC MUX"},
-	{"VoWLAN_UL", NULL, "VOC_EXT_EC MUX"},
 	{"VOICEMMODE1_UL", NULL, "VOC_EXT_EC MUX"},
 	{"VOICEMMODE2_UL", NULL, "VOC_EXT_EC MUX"},
 
@@ -9510,6 +9516,8 @@ static int msm_routing_probe(struct snd_soc_platform *platform)
 	snd_soc_add_platform_controls(platform,
 				device_pp_params_mixer_controls,
 				ARRAY_SIZE(device_pp_params_mixer_controls));
+
+	msm_dts_eagle_add_controls(platform);
 
 	snd_soc_add_platform_controls(platform, msm_source_tracking_controls,
 				      ARRAY_SIZE(msm_source_tracking_controls));
