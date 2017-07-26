@@ -1,0 +1,193 @@
+/* Copyright (c) 2013, The Linux Foundation. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&mdss_mdp {
+		dsi_tianma_ft8716_vid: qcom,mdss_dsi_tianma_ft8716_1080p_video {
+		qcom,mdss-dsi-panel-name = "TIANMA ft8716 1080p video mode dsi panel";
+		//qcom,ulps-enabled;
+		//qcom,suspend-ulps-enabled;
+		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
+		qcom,mdss-dsi-panel-type = "dsi_video_mode";
+		qcom,mdss-dsi-panel-destination = "display_1";
+		qcom,mdss-dsi-panel-framerate = <60>;
+		qcom,mdss-dsi-virtual-channel-id = <0>;
+		qcom,mdss-dsi-stream = <0>;
+		qcom,mdss-dsi-panel-width = <1080>;
+		qcom,mdss-dsi-panel-height = <1920>;
+		qcom,mdss-dsi-h-front-porch = <96>;
+		qcom,mdss-dsi-h-back-porch = <96>;
+		qcom,mdss-dsi-h-pulse-width = <4>;
+		qcom,mdss-dsi-h-sync-skew = <0>;
+		qcom,mdss-dsi-v-back-porch = <16>;
+		qcom,mdss-dsi-v-front-porch = <16>;
+		qcom,mdss-dsi-v-pulse-width = <2>;
+		qcom,mdss-dsi-h-left-border = <0>;
+		qcom,mdss-dsi-h-right-border = <0>;
+		qcom,mdss-dsi-v-top-border = <0>;
+		qcom,mdss-dsi-v-bottom-border = <0>;
+		qcom,mdss-dsi-bpp = <24>;
+		qcom,mdss-dsi-color-order = <0>;
+		qcom,mdss-dsi-underflow-color = <0x00>;
+		qcom,mdss-dsi-border-color = <0>;
+//		qcom,mdss-dsi-panel-broadcast-mode;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-on-command = [
+//init code
+
+15 00 00 00 00 00 02 51 00
+15 00 00 00 00 00 02 53 24
+15 00 00 00 00 00 02 5e 14
+
+//cmd2 enable
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 04 ff 87 16 01
+29 00 00 00 00 00 02 00 80
+29 00 00 00 00 00 03 ff 87 16
+
+//pwm 16k
+29 00 00 00 00 00 02 00 b0
+29 00 00 00 00 00 03 ca 08 08
+29 00 00 00 00 00 02 00 81
+29 01 00 00 00 00 0a CA e5 ff cc ff b2 ff 00 00 00
+//29 00 00 00 00 00 02 00 c1
+//29 00 00 00 00 00 02 c5 7b
+
+//ce, need update in mdss_ft8716.h as well
+29 00 00 00 00 00 02 00 a0
+29 00 00 00 00 00 0d D6 0e 06 02 09 09 09 11 15 0f 17 13 12
+29 00 00 00 00 00 02 00 b0
+29 00 00 00 00 00 0d D6 9b 9c 86 80 73 73 73 73 73 7a 8b 9c
+29 00 00 00 00 00 02 00 c0
+29 00 00 00 00 00 0d D6 89 87 73 80 71 71 7d 73 73 7d 7a 87
+29 00 00 00 00 00 02 00 d0
+29 00 00 00 00 00 0d D6 78 74 73 80 71 71 7d 73 73 80 80 80
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 02 91 80
+
+//cabc
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 10 //CABC G 1
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 a0 ac bb 9c db ac aa bb cb cc cb bb 8a 67 45 23 11 11
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 11 //CABC G 2
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 13 C7 a0 ab bb 9b da bb a9 bb ba cc bb ab 8a 67 45 23 11 11
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 12 //CABC G 3
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 a0 aa ab 8c da ab a9 ba ba bb cb 9a 8b 67 45 23 11 11
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 13 //CABC G 4
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 90 9b ab 8b ca bb 98 ba aa ba bc aa 89 67 45 23 11 11
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 14 //CABC G 5
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 13 C7 90 8b 9b 8c b9 bb 98 aa aa ba bb 9a 89 78 56 23 11 11
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 15 //CABC G 6
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 90 9a 9a 9b c8 ba 98 a9 aa a9 cb 99 89 78 56 34 22 12
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 16 //CABC G 7
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 90 8a 8b 8b b9 aa 98 a9 9a a9 ca 8a 89 88 67 35 22 22
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 17 //CABC G 8
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 13 C7 90 99 9a 8a a9 aa 98 99 b9 98 bb 8a 89 88 67 45 33 23
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 18 //CABC G 9
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 90 99 99 8a a8 aa 98 a8 99 99 aa 8b 89 88 78 46 33 33
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 19 //CABC G 10
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 13 C7 80 8a 99 8a a8 a9 89 89 9a 98 b9 9a 87 88 78 56 44 44
+
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1a //CABC G 11
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 80 99 89 8a 98 a9 98 98 99 89 a9 a9 88 88 88 67 44 44
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1b //CABC G 12
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 80 89 99 89 98 99 89 98 89 89 a9 99 88 88 88 67 55 55
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1c //CABC G 13
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 13 C7 80 98 98 89 98 99 88 98 98 89 a8 99 88 88 88 78 56 55
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1d //CABC G 14
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 80 88 89 89 88 99 88 98 98 88 98 99 89 88 88 78 66 66
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1e //CABC G 15
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 80 88 98 88 88 89 89 88 98 88 98 88 89 88 88 88 77 67
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 02 C6 1f //CABC G 16
+29 00 00 00 00 00 02 00 00
+29 00 00 00 00 00 13 C7 80 88 88 88 88 89 88 88 88 88 98 98 87 88 88 88 88 78
+29 00 00 00 00 00 02 00 00
+29 01 00 00 00 00 02 C6 00 // Auto Select Curve
+
+//cmd2 disable
+//29 00 00 00 00 00 02 00 00
+//29 00 00 00 00 00 04 ff 00 00 00
+//29 00 00 00 00 00 02 00 80
+//29 01 00 00 00 00 03 ff 00 00
+
+15 01 00 00 32 00 02 11 00
+15 01 00 00 14 00 02 29 00
+			];
+		qcom,mdss-dsi-off-command = [05 01 00 00 28 00 02 28 00
+					05 01 00 00 78 00 02 10 00
+					29 00 00 00 00 00 02 00 00
+					29 01 00 00 05 00 05 f7 5a a5 87 16
+					];
+
+		qcom,mdss-dsi-on-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-off-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-panel-status-command = [06 01 00 01 05 00 02 0A 08];
+		qcom,mdss-dsi-panel-status-command-state = "dsi_lp_mode";
+		qcom,mdss-dsi-panel-status-check-mode = "reg_read";
+		qcom,mdss-dsi-panel-status-value = <0x9c>;
+		qcom,mdss-dsi-h-sync-pulse = <0>;
+		qcom,mdss-dsi-traffic-mode = "non_burst_sync_event";
+		qcom,mdss-dsi-lane-map = <0>;
+		qcom,mdss-dsi-bllp-eof-power-mode;
+		qcom,mdss-dsi-bllp-power-mode;
+		qcom,mdss-dsi-lane-0-state;
+		qcom,mdss-dsi-lane-1-state;
+		qcom,mdss-dsi-lane-2-state;
+		qcom,mdss-dsi-lane-3-state;
+		qcom,mdss-dsi-panel-timings = [e6 38 26 00 68 6e 2a 3c 2c 03 04 00];
+		qcom,mdss-dsi-t-clk-post = <0x0d>;
+		qcom,mdss-dsi-t-clk-pre = <0x30>;
+		qcom,mdss-dsi-dma-trigger = "trigger_sw";
+		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-reset-sequence = <1 2>, <0 2>, <1 1>;
+		qcom,mdss-pan-physical-width-dimension = <62>;
+		qcom,mdss-pan-physical-height-dimension = <110>;
+	};
+};

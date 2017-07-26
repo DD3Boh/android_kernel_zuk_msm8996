@@ -32,7 +32,7 @@
 			wsa881x_213: wsa881x@21170213 {
 				compatible = "qcom,wsa881x";
 				reg = <0x00 0x21170213>;
-				qcom,spkr-sd-n-gpio = <&pmi8994_gpios 2 0>;
+				qcom,spkr-sd-n-gpio = <&pmi8994_gpios 3 0>;
 			};
 
 			wsa881x_214: wsa881x@21170214 {

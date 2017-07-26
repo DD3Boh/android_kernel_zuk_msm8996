@@ -722,9 +722,11 @@
 	compatible = "qcom,mdss_hdmi_pll_8996_v2";
 };
 
+/*
 &mdss_hdmi_tx {
 	status = "ok";
 };
+*/
 
 &ssphy {
 	qcom,qmp-misc-config;

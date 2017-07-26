@@ -448,7 +448,7 @@
 		};
 
 		mdss_dsi1: qcom,mdss_dsi_ctrl1@996000 {
-			compatible = "qcom,mdss-dsi-ctrl";
+			compatible = "qcom,mdss-dsi-ctrl-notuse";
 			label = "MDSS DSI CTRL->1";
 			cell-index = <1>;
 			reg = 	<0x996000 0x400>,
