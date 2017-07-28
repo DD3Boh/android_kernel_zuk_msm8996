@@ -1,11 +1,12 @@
 #!/bin/bash
-kernel_version=${1}
+kernel_version=${2}
 kernel_name="Noog-CAF"
-device_name="Z2"
+device_name=${1}
 zip_name="$kernel_name-$device_name-$kernel_version.zip"
 kernel_dir=$PWD
 
-export CONFIG_FILE="z2_plus_defconfig"
+export CONFIG_FILE_Z2_PLUS="z2_plus_defconfig"
+export CONFIG_FILE_Z2_ROW="z2_row_defconfig"
 export ARCH="arm64"
 export KBUILD_BUILD_USER="Lemoncè"
 export KBUILD_BUILD_HOST="DD3Boh"
@@ -13,8 +14,17 @@ export TOOLCHAIN_PATH="${HOME}/kernel/aarch64-linux-android-4.9"
 export CROSS_COMPILE=$TOOLCHAIN_PATH/bin/aarch64-linux-android-
 export CONFIG_ABS_PATH="arch/${ARCH}/configs/${CONFIG_FILE}"
 export sourcedir=$kernel_dir
-export objdir=$kernel_dir/out
+export objdir_z2_plus=$kernel_dir/out/z2_plus
+export objdir_z2_row=$kernel_dir/out/z2_row
 export anykernel=$kernel_dir/anykernel
+
+if [ "$device_name" == "z2_row" ]; then
+  CONFIG_FILE=$CONFIG_FILE_Z2_ROW
+  objdir=$objdir_z2_row
+else
+  CONFIG_FILE=$CONFIG_FILE_Z2_PLUS
+  objdir=$objdir_z2_plus
+fi;
 compile() {
   make O=$objdir  $CONFIG_FILE -j16
   make O=$objdir -j16
