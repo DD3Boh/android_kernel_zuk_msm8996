@@ -6,6 +6,7 @@
 #define MAX_PLANES_PER_STREAM 3
 #define MAX_NUM_STREAM 7
 
+#define ISP_VERSION_48        48
 #define ISP_VERSION_47        47
 #define ISP_VERSION_46        46
 #define ISP_VERSION_44        44
@@ -21,6 +22,8 @@
 #define ISP_SVHDR_OUT_BIT     (0x10000 << 7) /* SVHDR output bufq stream*/
 
 #define ISP_STATS_STREAM_BIT  0x80000000
+
+#define VFE_HW_LIMIT 1
 
 struct msm_vfe_cfg_cmd_list;
 
@@ -260,6 +263,26 @@ struct msm_vfe_fetch_eng_start {
 	uint32_t frame_id;
 };
 
+enum msm_vfe_fetch_eng_pass {
+	OFFLINE_FIRST_PASS,
+	OFFLINE_SECOND_PASS,
+	OFFLINE_MAX_PASS,
+};
+
+struct msm_vfe_fetch_eng_multi_pass_start {
+	uint32_t session_id;
+	uint32_t stream_id;
+	uint32_t buf_idx;
+	uint8_t  offline_mode;
+	uint32_t fd;
+	uint32_t buf_addr;
+	uint32_t frame_id;
+	uint32_t output_buf_idx;
+	uint32_t input_buf_offset;
+	enum msm_vfe_fetch_eng_pass  offline_pass;
+	uint32_t output_stream_id;
+};
+
 struct msm_vfe_axi_plane_cfg {
 	uint32_t output_width; /*Include padding*/
 	uint32_t output_height;
@@ -327,6 +350,7 @@ enum msm_vfe_axi_stream_update_type {
 	UPDATE_STREAM_REMOVE_BUFQ,
 	UPDATE_STREAM_SW_FRAME_DROP,
 	UPDATE_STREAM_REQUEST_FRAMES_VER2,
+	UPDATE_STREAM_OFFLINE_AXI_CONFIG,
 };
 #define UPDATE_STREAM_REQUEST_FRAMES_VER2 UPDATE_STREAM_REQUEST_FRAMES_VER2
 
@@ -785,6 +809,18 @@ struct msm_isp_event_data {
 	} u; /* union can have max 52 bytes */
 };
 
+enum msm_vfe_ahb_clk_vote {
+	MSM_ISP_CAMERA_AHB_SVS_VOTE = 1,
+	MSM_ISP_CAMERA_AHB_TURBO_VOTE = 2,
+	MSM_ISP_CAMERA_AHB_NOMINAL_VOTE = 3,
+	MSM_ISP_CAMERA_AHB_SUSPEND_VOTE = 4,
+};
+
+struct msm_isp_ahb_clk_cfg {
+	uint32_t vote;
+	uint32_t reserved[2];
+};
+
 #define V4L2_PIX_FMT_QBGGR8  v4l2_fourcc('Q', 'B', 'G', '8')
 #define V4L2_PIX_FMT_QGBRG8  v4l2_fourcc('Q', 'G', 'B', '8')
 #define V4L2_PIX_FMT_QGRBG8  v4l2_fourcc('Q', 'G', 'R', '8')
@@ -840,6 +876,9 @@ enum msm_isp_ioctl_cmd_code {
 	MSM_ISP_SET_DUAL_HW_MASTER_SLAVE,
 	MSM_ISP_MAP_BUF_START_FE,
 	MSM_ISP_UNMAP_BUF,
+	MSM_ISP_FETCH_ENG_MULTI_PASS_START,
+	MSM_ISP_MAP_BUF_START_MULTI_PASS_FE,
+	MSM_ISP_AHB_CLK_CFG,
 };
 
 #define VIDIOC_MSM_VFE_REG_CFG \
@@ -942,4 +981,14 @@ enum msm_isp_ioctl_cmd_code {
 	_IOWR('V', MSM_ISP_UNMAP_BUF, \
 		struct msm_isp_unmap_buf_req)
 
+#define VIDIOC_MSM_ISP_FETCH_ENG_MULTI_PASS_START \
+	_IOWR('V', MSM_ISP_FETCH_ENG_MULTI_PASS_START, \
+		struct msm_vfe_fetch_eng_multi_pass_start)
+
+#define VIDIOC_MSM_ISP_MAP_BUF_START_MULTI_PASS_FE \
+	_IOWR('V', MSM_ISP_MAP_BUF_START_MULTI_PASS_FE, \
+		struct msm_vfe_fetch_eng_multi_pass_start)
+
+#define VIDIOC_MSM_ISP_AHB_CLK_CFG \
+	_IOWR('V', MSM_ISP_AHB_CLK_CFG, struct msm_isp_ahb_clk_cfg)
 #endif /* __MSMB_ISP__ */
