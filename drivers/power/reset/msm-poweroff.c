@@ -337,6 +337,8 @@ static void msm_restart_prepare(const char *cmd)
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
+	} else if (in_panic) {
+		__raw_writel(0x77665501, restart_reason);
 	}
 
 	flush_cache_all();
