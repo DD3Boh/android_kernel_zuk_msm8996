@@ -9463,38 +9463,6 @@ group_type group_classify(struct sched_group *group,
 	return group_other;
 }
 
-#ifdef CONFIG_NO_HZ_COMMON
-/*
- * idle load balancing data
- *  - used by the nohz balance, but we want it available here
- *    so that we can see which CPUs have no tick.
- */
-static struct {
-	cpumask_var_t idle_cpus_mask;
-	atomic_t nr_cpus;
-	unsigned long next_balance;     /* in jiffy units */
-} nohz ____cacheline_aligned;
-
-static inline void update_cpu_stats_if_tickless(struct rq *rq)
-{
-	/* only called from update_sg_lb_stats when irqs are disabled */
-	if (cpumask_test_cpu(rq->cpu, nohz.idle_cpus_mask)) {
-		/* rate limit updates to once-per-jiffie at most */
-		if (READ_ONCE(jiffies) <= rq->last_load_update_tick)
-			return;
-
-		raw_spin_lock(&rq->lock);
-		update_rq_clock(rq);
-		update_idle_cpu_load(rq);
-		update_cfs_rq_load_avg(rq->clock_task, &rq->cfs, false);
-		raw_spin_unlock(&rq->lock);
-	}
-}
-
-#else
-static inline void update_cpu_stats_if_tickless(struct rq *rq) { }
-#endif
-
 /**
  * update_sg_lb_stats - Update sched_group's statistics for load balancing.
  * @env: The load balancing environment.
@@ -9525,12 +9493,6 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 
 		if (cpu_isolated(i))
 			continue;
-
-		/* if we are entering idle and there are CPUs with
-		 * their tick stopped, do an update for them
-		 */
-		if (env->idle == CPU_NEWLY_IDLE)
-			update_cpu_stats_if_tickless(rq);
 
 		/* Bias balancing toward cpus of our domain */
 		if (local_group)
@@ -11004,6 +10966,12 @@ static inline int find_new_hmp_ilb(int type)
 	return 0;
 }
 #endif	/* CONFIG_SCHED_HMP */
+
+static struct {
+	cpumask_var_t idle_cpus_mask;
+	atomic_t nr_cpus;
+	unsigned long next_balance;     /* in jiffy units */
+} nohz ____cacheline_aligned;
 
 static inline int find_new_ilb(int type)
 {
