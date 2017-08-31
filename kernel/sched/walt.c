@@ -214,6 +214,7 @@ update_window_start(struct rq *rq, u64 wallclock)
 	rq->window_start += (u64)nr_windows * (u64)walt_ravg_window;
 
 	rq->cum_window_demand = rq->cumulative_runnable_avg;
+	cpufreq_update_util(rq, 0);
 }
 
 /*
