@@ -4052,25 +4052,31 @@ static int msm_routing_ext_ec_put(struct snd_kcontrol *kcontrol,
 	switch (msm_route_ext_ec_ref) {
 	case EXT_EC_REF_PRI_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_PRIMARY_MI2S_TX;
+		msm_route_ext_ec_ref = 1;
 		break;
 	case EXT_EC_REF_SEC_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_SECONDARY_MI2S_TX;
+		msm_route_ext_ec_ref = 2;
 		break;
 	case EXT_EC_REF_TERT_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_TERTIARY_MI2S_TX;
+		msm_route_ext_ec_ref = 3;
 		break;
 	case EXT_EC_REF_QUAT_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_QUATERNARY_MI2S_TX;
+		msm_route_ext_ec_ref = 4;
 		break;
 	case EXT_EC_REF_QUIN_MI2S_TX:
 		ext_ec_ref_port_id = AFE_PORT_ID_QUINARY_MI2S_TX;
 		break;
 	case EXT_EC_REF_SLIM_1_TX:
 		ext_ec_ref_port_id = SLIMBUS_1_TX;
+		msm_route_ext_ec_ref = 5;
 		break;
 	case EXT_EC_REF_NONE:
 	default:
 		ext_ec_ref_port_id = AFE_PORT_INVALID;
+		msm_route_ext_ec_ref = 0;
 		state = false;
 		break;
 	}
