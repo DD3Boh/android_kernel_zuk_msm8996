@@ -879,4 +879,11 @@ config SND_SOC_MSM_HDMI_CODEC_RX
 config SND_SOC_MSM_HDMI_DBA_CODEC_RX
 	bool "HDMI DBA Audio Playback"
 	depends on MSM_DBA
+
+config NXP_TFA98xx
+        depends on I2C
+        tristate "NXP TFA98xx Support"
+        ---help---
+          The NXP TFA98xx chip is used as a  smart PA Controller.
+
 endmenu
