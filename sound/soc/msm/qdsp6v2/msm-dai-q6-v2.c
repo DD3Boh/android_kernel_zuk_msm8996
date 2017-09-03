@@ -77,6 +77,16 @@ static const struct afe_clk_cfg lpass_clk_cfg_default = {
 	Q6AFE_LPASS_MODE_CLK1_VALID,
 	0,
 };
+
+static struct afe_clk_set q6_mi2s_rx_clk = {
+	AFE_API_VERSION_I2S_CONFIG,
+	Q6AFE_LPASS_CLK_ID_QUAD_MI2S_IBIT,
+	Q6AFE_LPASS_IBIT_CLK_1_P536_MHZ,
+	Q6AFE_LPASS_CLK_ATTRIBUTE_COUPLE_NO,
+	Q6AFE_LPASS_CLK_ROOT_DEFAULT,
+	0,
+};
+
 enum {
 	STATUS_PORT_STARTED, /* track if AFE port has started */
 	/* track AFE Tx port status for bi-directional transfers */
@@ -254,7 +264,8 @@ static const struct soc_enum tdm_config_enum[] = {
 static DEFINE_MUTEX(tdm_mutex);
 
 static atomic_t tdm_group_ref[IDX_GROUP_TDM_MAX];
-
+extern atomic_t quat_mi2s_clk_ref;
+static struct msm_dai_q6_mi2s_dai_data *mi2s_quat_dai_data;
 /* cache of group cfg per parent node */
 static struct afe_param_id_group_device_tdm_cfg tdm_group_cfg = {
 	AFE_API_VERSION_GROUP_DEVICE_TDM_CONFIG,
@@ -5644,6 +5655,9 @@ static int msm_dai_q6_mi2s_dev_probe(struct platform_device *pdev)
 	} else
 		dev_set_drvdata(&pdev->dev, dai_data);
 
+	if (mi2s_intf == MSM_QUAT_MI2S)
+		mi2s_quat_dai_data = dai_data;
+
 	pdev->dev.platform_data = mi2s_pdata;
 
 	rc = msm_dai_q6_mi2s_platform_data_validation(pdev,
@@ -5682,6 +5696,70 @@ static int msm_dai_q6_mi2s_dev_remove(struct platform_device *pdev)
 static const struct snd_soc_component_driver msm_dai_q6_component = {
 	.name		= "msm-dai-q6-dev",
 };
+
+int msm_q6_enable_mi2s_clocks(bool enable)
+{
+	struct msm_dai_q6_dai_data *dai_data = &mi2s_quat_dai_data->rx_dai.mi2s_dai_data ;
+	union afe_port_config port_config;
+	u16 port_id = 0;
+	int rc = 0;
+
+	if (msm_mi2s_get_port_id(MSM_QUAT_MI2S, SNDRV_PCM_STREAM_PLAYBACK, &port_id)) {
+		pr_debug(KERN_ERR"%s: invalid port id %#x\n", __func__, port_id);
+		return -EINVAL;
+	}
+	pr_debug("%s: afe port id = 0x%x\n"
+	"dai_data->channels = %u sample_rate = %u\n", __func__,
+	port_id, dai_data->channels, dai_data->rate);
+
+	if(enable){
+		if (!test_bit(STATUS_PORT_STARTED, dai_data->status_mask)) {
+			/* PORT START should be set if prepare called
+			* in active state.
+			*/
+			q6_mi2s_rx_clk.enable = 1;
+			rc = afe_set_lpass_clock_v2(AFE_PORT_ID_QUATERNARY_MI2S_RX, &q6_mi2s_rx_clk);
+			if (rc < 0) {
+				pr_err("%s: afe_set_lpass_clock failed\n", __func__);
+				return rc;
+			}
+			port_config.i2s.channel_mode = AFE_PORT_I2S_SD1;
+			port_config.i2s.mono_stereo = MSM_AFE_CH_STEREO;
+			port_config.i2s.bit_width = 16;
+			port_config.i2s.i2s_cfg_minor_version = AFE_API_VERSION_I2S_CONFIG;
+			port_config.i2s.sample_rate = 48000;
+			port_config.i2s.ws_src = 1;
+			pr_debug("[%s][%d]afe_port_start[%d]\n", __func__, __LINE__,port_id);
+			rc = afe_port_start(port_id, &port_config, 48000);
+			if (IS_ERR_VALUE(rc)){
+				printk(KERN_ERR"fail to open AFE port\n");
+				return -EINVAL;
+			}else
+				set_bit(STATUS_PORT_STARTED,dai_data->status_mask);
+		}
+		if (!test_bit(STATUS_PORT_STARTED, dai_data->hwfree_status)) {
+			set_bit(STATUS_PORT_STARTED, dai_data->hwfree_status);
+			pr_debug("%s: set hwfree_status to started\n", __func__);
+		}
+	}else{
+		if (test_bit(STATUS_PORT_STARTED, dai_data->status_mask)) {
+			q6_mi2s_rx_clk.enable = 0;
+			rc = afe_set_lpass_clock_v2(AFE_PORT_ID_QUATERNARY_MI2S_RX, &q6_mi2s_rx_clk);
+			if (rc < 0) {
+				pr_err("%s: afe_set_lpass_clock failed\n", __func__);
+			}
+			rc = afe_close(port_id);
+			if (IS_ERR_VALUE(rc)){
+				printk(KERN_ERR"fail to close AFE port\n");
+			}
+		}
+		clear_bit(STATUS_PORT_STARTED, dai_data->status_mask);
+		if (test_bit(STATUS_PORT_STARTED, dai_data->hwfree_status))
+			clear_bit(STATUS_PORT_STARTED, dai_data->hwfree_status);
+	}
+	return rc;
+}
+EXPORT_SYMBOL(msm_q6_enable_mi2s_clocks);
 
 static int msm_dai_q6_dev_probe(struct platform_device *pdev)
 {
