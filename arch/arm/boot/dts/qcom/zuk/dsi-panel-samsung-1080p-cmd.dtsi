@@ -77,6 +77,7 @@
 		//qcom,esd-check-enabled;
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <115>;
+		qcom,mdss-dsi-panel-orientation = "180";
         qcom,mdss-dsi-panel-timings-phy-v2 = [22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0
