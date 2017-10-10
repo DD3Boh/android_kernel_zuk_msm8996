@@ -208,7 +208,7 @@ static void mdss_mdp_kcal_update_pcc(struct kcal_lut_data *lut_data)
 	pcc_config.ops = lut_data->enable ?
 		MDP_PP_OPS_WRITE | MDP_PP_OPS_ENABLE :
 			MDP_PP_OPS_WRITE | MDP_PP_OPS_DISABLE;
-	pcc_config.r.r = lut_data->red * PCC_ADJ;
+	pcc_config.r.r = lut_data->red * 0x80;
 	pcc_config.g.g = lut_data->green * PCC_ADJ;
 	pcc_config.b.b = lut_data->blue * PCC_ADJ;
 
@@ -555,7 +555,7 @@ static int kcal_ctrl_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, lut_data);
 
 	lut_data->enable = 0x1; // KCAL driver is on by default
-	lut_data->red = DEF_PCC;
+	lut_data->red = 0xF0;
 	lut_data->green = DEF_PCC;
 	lut_data->blue = DEF_PCC;
 	lut_data->minimum = 0x23;
