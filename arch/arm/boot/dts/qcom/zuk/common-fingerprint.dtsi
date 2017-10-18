@@ -1,0 +1,38 @@
+&soc {
+	fpc1020 {
+		compatible = "fpc,fpc1020";
+		interrupt-parent = <&tlmm>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fpc_default>;
+		interrupts = <91 0x1>;
+		fpc,gpio_irq = <&tlmm 91 0x00>;
+		fpc,gpio_reset = <&tlmm 90 0x00>;
+	};
+	
+	gen-vkeys {
+		compatible = "qcom,gen-vkeys";
+		label = "synaptics_dsx";
+		qcom,disp-maxx = <1599>;
+		qcom,disp-maxy = <2559>;
+		qcom,panel-maxx = <1599>;
+		qcom,panel-maxy = <2703>;
+		qcom,key-codes = <158 139 102 217>;
+	};
+};
+
+&tlmm {
+	/*add for fpc1020*/
+	fpc_mux {
+		fpc_default: default {
+			mux {
+				pins = "gpio90", "gpio91";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio90", "gpio91";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+	};
+};
