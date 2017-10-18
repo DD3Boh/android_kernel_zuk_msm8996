@@ -1,0 +1,361 @@
+#include "common-camera-sensor.dtsi"
+#include "common-charger.dtsi"
+#include "common-fingerprint.dtsi"
+#include "common-led.dtsi"
+#include "common-mdss.dtsi"
+#include "common-ramoops.dtsi"
+#include "common-regulator.dtsi"
+#include "common-sound.dtsi"
+#include "common-usb.dtsi"
+#include "common-vibration.dtsi"
+
+#include <dt-bindings/input/ti-drv260x.h>
+
+/ {
+	aliases {
+		i2c1 = &i2c_1;
+		i2c9 = &i2c_9;
+		/delete-property/ i2c12;
+		/delete-property/ spi12;
+	};
+};
+
+&soc {
+	/delete-node/ spi@75BA000;
+
+	i2c_1: i2c@7575000 {/* BLSP1 QUP1 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x7575000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 95 0>;
+		dmas = <&dma_blsp1 12 32 0x20000020 0x20>,
+			<&dma_blsp1 13 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,master-id = <86>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
+			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_1_active>;
+		pinctrl-1 = <&i2c_1_sleep>;
+	};
+	
+	i2c_9: i2c@75b7000 { /* BLSP2 QUP2 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x75b7000 0x1000>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 103 0>;
+		dmas = <&dma_blsp2 16 32 0x20000020 0x20>,
+			<&dma_blsp2 17 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+		qcom,disable-dma;
+		qcom,master-id = <84>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp2_qup3_i2c_apps_clk>;
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_9_active>;
+		pinctrl-1 = <&i2c_9_sleep>;
+	};
+
+	i2c@7575000 {
+		intersil@36 {
+			compatible = "ti,lm36923";
+			reg = <0x36>;
+			vcc_i2c-supply = <&pm8994_s4>;
+			intersil,i2c-pull-up;
+			interrupt-parent = <&tlmm>;
+		};
+	};
+
+	gpio_keys {
+		pinctrl-names = "tlmm_gpio_key_active", "tlmm_gpio_key_suspend";
+		pinctrl-0 = <&gpio_key_active>;
+		pinctrl-1 = <&gpio_key_suspend>;
+		/delete-node/ cam_snapshot;
+		/delete-node/ cam_focus;
+
+		home {
+			label = "home";
+			gpios = <&tlmm 38 0x1>;
+			linux,input-type = <1>;
+			linux,code = <102>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+		};
+	};
+
+	hall_switch {
+		reg = <0 0>;
+		compatible = "shenqi,hall_switch";
+		interrupt-parent = <&tlmm>;
+		interrupts = <124 0>;
+		shenqi,hall-irq-gpio = <&tlmm 124 0x0>;
+		ssc_vdd-supply = <&pm8994_l19>;
+	};
+	
+	qcom,bcl {
+		/delete-property/ qcom,bcl-enable;
+		qcom,vph-high-threshold-uv = <3200000>;
+		qcom,vph-low-threshold-uv = <3000000>;
+		qcom,soc-low-threshold = <0>;
+	};
+};
+
+&wdog {
+	qcom,bark-time = <15000>;
+};
+
+&usb3 {
+	/delete-property/ vbus_dwc3-supply;
+};
+
+&qusb_phy0 {
+	qcom,qusb-phy-init-seq = <0xf8 0x80
+					0x03 0x84
+					0x83 0x88
+					0xCf 0x8C
+					0x30 0x08
+					0x79 0x0C
+					0x21 0x10
+					0x14 0x9C
+					0x9F 0x1C
+					0x00 0x18>;
+};
+
+&ssphy {
+	qcom,phy-tuning-seq = <0x3f 0x218
+							0x7  0x21c
+							0x3f 0x220>;
+};
+
+&tlmm {
+	tlmm_gpio_key {
+		gpio_key_active: gpio_key_active {
+			mux {
+				pins = "gpio38";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio38";
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+		};
+		gpio_key_suspend: gpio_key_suspend {
+			mux {
+				pins = "gpio38";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio38";
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+		};
+	};
+
+	i2c_9 {
+		i2c_9_active: i2c_9_active {
+			mux {
+				pins = "gpio51", "gpio52";
+				function = "blsp_i2c9";
+			};
+			config {
+				pins = "gpio51", "gpio52";
+				drive-strength = <4>;
+				bias-disable;
+			};
+		};
+
+		i2c_9_sleep: i2c_9_sleep {
+			mux {
+				pins = "gpio51", "gpio52";
+				function = "blsp_i2c9";
+			};
+
+			config {
+				pins = "gpio51", "gpio52";
+				drive-strength = <4>;
+				bias-pull-up;
+			};
+		};
+	};
+	
+	i2c_1 {
+		i2c_1_active: i2c_1_active {
+			mux {
+				pins = "gpio2", "gpio3";
+				function = "blsp_i2c1";
+			};
+
+			config {
+				pins = "gpio2", "gpio3";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+
+		i2c_1_sleep: i2c_1_sleep {
+			mux {
+				pins = "gpio2", "gpio3";
+				function = "blsp_i2c1";
+			};
+
+			config {
+				pins = "gpio2", "gpio3";
+				drive-strength = <2>;
+				bias-disable;
+			};
+		};
+	};
+	max86x00_mux {
+		default {
+			mux {
+				pins = "gpio123";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio123";
+				drive-strength = <0x2>;
+				bias-pull-up;
+			};
+		};
+	};
+	
+	/*add for max86x00*/
+	max86x00_mux {
+		max86x00_default: default {
+			mux {
+				pins = "gpio123";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio123";
+				drive-strength = <2>;
+				bias-pull-up;
+			};
+		};
+	};
+};
+
+&ts_active {
+	mux {
+		pins = "gpio9", "gpio125";
+	};
+	config {
+		pins = "gpio9", "gpio125";
+	};
+};
+
+&ts_suspend {
+	mux {
+		pins = "gpio9", "gpio125";
+	};
+	config {
+		pins = "gpio9", "gpio125";
+	};
+};
+
+&tert_mi2s_sleep {
+	mux {
+		pins = "gpio75";
+	};
+	config {
+		pins = "gpio75";
+	};
+};
+
+&tert_mi2s_active {
+	mux {
+		pins = "gpio75";
+	};
+	config  {
+		pins = "gpio75";
+	};
+};
+
+&wsa881x_213 {
+	qcom,spkr-sd-n-gpio = <&pmi8994_gpios 3 0>;
+};
+
+&pm8994_gpios {
+	/delete-node/ gpio@cd00;
+    
+	gpio@d500 { /* GPIO 22 - lcd_bklt_reg_en */
+		qcom,mode = <1>;	/* DIGITAL OUT */
+		qcom,output-type = <0>;		/* CMOS logic */
+		qcom,invert = <1>; 	/* output hight initially */
+		qcom,vin-sel = <2>;	/* 1.8 */
+		qcom,src-sel = <0>;	/* CONSTANT */
+		qcom,out-strength = <1>;	/* Low drive strength */
+		qcom,master-en = <1>;	/* ENABLE GPIO */
+		status = "okay";
+	};
+};
+
+&pmi8994_mpps {
+	mpp@a000 { /* MPP 1 */
+		reg = <0xa000 0x100>;
+		qcom,pin-num = <1>;
+		qcom,invert = <0>;
+        qcom,vin-sel = <0>;
+	};
+};
+
+&i2c_7 {
+	silabs4705@11 {
+		status = "disabled";
+	};
+};
+
+&spmi_bus {
+	qcom,pm8994@0 {
+		qcom,power-on@800 {
+			interrupts = <0x0 0x8 0x0>, <0x0 0x8 0x1>, <0x0 0x8 0x3>, <0x0 0x8 0x4>,  <0x0 0x8 0x5>;
+			interrupt-names = "kpdpwr", "resin", "kpdpwr-bark", "resin-bark", "kpdpwr-resin-bark";
+			qcom,s3-debounce = <32>;
+			
+			qcom,pon_1 {
+				qcom,s1-timer = <6720>;
+				qcom,s2-type = <7>;
+				qcom,use-bark;
+			};
+			
+			qcom,pon_2 {
+				qcom,s1-timer = <0>;
+				qcom,s2-timer = <2000>;
+				qcom,s2-type = <1>;
+				qcom,use-bark;
+			};
+			qcom,pon_3 {
+				/delete-property/ qcom,support-reset;
+			};
+		};
+	};
+};
+
+&pm8994_rtc {
+	qcom,qpnp-rtc-alarm-pwrup = <1>;
+};
+
+&pmi8994_gpios {
+	gpio@c900 {
+		qcom,src-sel = <0>;
+		qcom,invert = <1>;
+	};
+};
+
+&i2c_8 {
+	/delete-node/ nq@28;
+};
