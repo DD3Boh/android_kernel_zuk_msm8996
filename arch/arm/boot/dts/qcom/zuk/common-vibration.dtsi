@@ -1,0 +1,28 @@
+&tlmm {
+	tlmm_gpio_key {
+        haptics_en_sleep: haptics_en_sleep {
+			mux {
+				pins = "gpio77";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio77";
+				drive-strength = <2>;   /* 2 mA */
+				bias-disable;           /* NO PULL */
+			};
+		};
+		haptics_en_active: haptics_en_active {
+			mux {
+				pins = "gpio77";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio77";
+				drive-strength = <6>;   /* 8 mA */
+				bias-disable;           /* NO PULL */
+			};
+		};
+    };
+};
