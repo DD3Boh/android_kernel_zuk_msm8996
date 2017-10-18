@@ -1,0 +1,28 @@
+&pmi8994_charger {
+	qcom,battery-data = <&mtp_batterydata>;	
+	qcom,fastchg-current-ma = <2000>;
+	qcom,float-voltage-mv = <4400>;
+	qcom,thermal-mitigation = <1400 500 0>;
+	qcom,warm-cc-comp = <1300>;
+	qcom,warm-fv-comp = <4100>;
+	qcom,cool-cc-comp = <500>;
+	qcom,cool-fv-comp = <4400>;
+	qcom,usbin-vadc = <&pmi8994_vadc>;
+	qcom,bmd-algo-disabled;
+	qcom,float-voltage-comp = <0x10>;
+	qcom,fastchg-current-comp = <1500>;
+};
+
+&pmi8994_fg {
+	qcom,resume-soc = <99>;
+	qcom,fg-cc-cv-threshold-mv = <4390>;
+	qcom,thermal-coefficients = [b7 85 b2 49 71 35];  // NTC B: 4250
+};
+
+&pmi8994_pwm_4 {
+	qcom,supported-sizes = <6>,<7>, <9>;
+	qcom,period = <1000>;
+	qcom,lpg-dtest-line = <4>;
+	qcom,dtest-output = <2>;
+	status = "okay";
+};

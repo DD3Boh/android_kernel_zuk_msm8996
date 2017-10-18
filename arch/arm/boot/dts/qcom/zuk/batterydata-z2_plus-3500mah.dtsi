@@ -1,0 +1,146 @@
+&mtp_batterydata {
+qcom,default_2343799_lenovo_3500mah_averaged_masterslave_mar16th2016 {
+		/* #2343799_Lenovo_3500mAh_averaged_MasterSlave_Mar16th2016*/
+		qcom,max-voltage-uv = <4400000>;
+		qcom,nom-batt-capacity-mah = <3500>;
+		qcom,batt-id-kohm = <100>;
+		qcom,battery-beta = <4250>;
+		qcom,battery-type = "default_2343799_lenovo_3500mah_averaged_masterslave_mar16th2016";
+		qcom,chg-rslow-comp-c1 = <3361614>;
+		qcom,chg-rslow-comp-c2 = <4737910>;
+		qcom,chg-rs-to-rslow = <843256>;
+		qcom,chg-rslow-comp-thr = <0xA5>;
+		qcom,checksum = <0x45AB>;
+		qcom,gui-version = "PMI8996GUI - 1.1.0.0";
+		qcom,fg-profile-data = [
+			E0 83 CA 7C 
+			02 81 05 77 
+			68 83 22 75 
+			F0 89 EA 94 
+			0F 82 90 9A 
+			7F BD 2C CA 
+			56 12 F5 83 
+			04 7D 05 81 
+			D2 76 51 83 
+			71 6B D4 72 
+			7D 85 52 82 
+			91 99 D4 BC 
+			A9 C9 58 0D 
+			DD 0D A0 5A 
+			14 70 50 FD 
+			E6 3C 3A 44 
+			C6 3A 00 00 
+			F3 44 D4 20 
+			FD 36 00 00 
+			00 00 00 00 
+			00 00 00 00 
+			CB 6A 22 69 
+			56 68 7D 88 
+			52 76 B6 69 
+			FB 4A 11 81 
+			3D 75 3D 68 
+			95 6D 1C A9 
+			1A 69 60 B3 
+			5D A0 71 0C 
+			28 00 FF 36 
+			F0 11 30 03 
+			00 00 00 0C 
+		];
+	};
+	qcom,Coslight_9k_2385871_lenovo_bl268drn_3500mah_averaged_masterslave_jun1st2016 {
+		/* #2385871_Lenovo_BL268DRN_3500mAh_averaged_MasterSlave_Jun1st2016*/
+		qcom,max-voltage-uv = <4400000>;
+		qcom,nom-batt-capacity-mah = <2700>;
+		qcom,batt-id-kohm = <9>;
+		qcom,battery-beta = <4250>;
+		qcom,battery-type = "Coslight_9k_2385871_lenovo_bl268drn_3500mah_averaged_masterslave";
+		qcom,chg-rslow-comp-c1 = <3357796>;
+		qcom,chg-rslow-comp-c2 = <4587586>;
+		qcom,chg-rs-to-rslow = <731876>;
+		qcom,chg-rslow-comp-thr = <0xA2>;
+		qcom,checksum = <0xE4B2>;
+		qcom,gui-version = "PMI8996GUI - 1.1.0.0";
+		qcom,fg-profile-data = [
+			F7 83 AF 7D 
+			BF 81 3B 7C 
+			61 83 CD 6D 
+			1E 88 6E 8E 
+			13 82 7C 9A 
+			8C BD 78 CA 
+			5B 0E 04 88 
+			E5 7D CA 81 
+			35 7C 4A 83 
+			BA 71 04 74 
+			39 74 57 82 
+			53 99 80 BC 
+			24 C9 5E 0D 
+			95 0D A0 5A 
+			14 70 50 FD 
+			2E 3E 87 44 
+			C6 3A 00 00 
+			17 4C FD 29 
+			97 38 00 00 
+			00 00 00 00 
+			00 00 00 00 
+			19 6A 89 68 
+			74 5B 1E 88 
+			50 76 95 69 
+			38 5B 01 81 
+			14 75 E3 63 
+			03 58 9D A8 
+			1D E2 60 93 
+			5E A0 71 0C 
+			28 00 FF 36 
+			F0 11 30 03 
+			00 00 00 0C 
+		];
+	};
+	qcom,ATL_2343799_lenovo_3500mah_averaged_masterslave_mar16th2016 {
+		/* #2343799_Lenovo_3500mAh_averaged_MasterSlave_Mar16th2016*/
+		qcom,max-voltage-uv = <4400000>;
+		qcom,nom-batt-capacity-mah = <3500>;
+		qcom,batt-id-kohm = <50>;
+		qcom,battery-beta = <4250>;
+		qcom,battery-type = "ATL_2343799_lenovo_3500mah_averaged_masterslave_mar16th2016";
+		qcom,chg-rslow-comp-c1 = <3361614>;
+		qcom,chg-rslow-comp-c2 = <4737910>;
+		qcom,chg-rs-to-rslow = <843256>;
+		qcom,chg-rslow-comp-thr = <0xA5>;
+		qcom,checksum = <0x45AB>;
+		qcom,gui-version = "PMI8996GUI - 1.1.0.0";
+		qcom,fg-profile-data = [
+			E0 83 CA 7C 
+			02 81 05 77 
+			68 83 22 75 
+			F0 89 EA 94 
+			0F 82 90 9A 
+			7F BD 2C CA 
+			56 12 F5 83 
+			04 7D 05 81 
+			D2 76 51 83 
+			71 6B D4 72 
+			7D 85 52 82 
+			91 99 D4 BC 
+			A9 C9 58 0D 
+			DD 0D A0 5A 
+			14 70 50 FD 
+			E6 3C 3A 44 
+			C6 3A 00 00 
+			F3 44 D4 20 
+			FD 36 00 00 
+			00 00 00 00 
+			00 00 00 00 
+			CB 6A 22 69 
+			56 68 7D 88 
+			52 76 B6 69 
+			FB 4A 11 81 
+			3D 75 3D 68 
+			95 6D 1C A9 
+			1A 69 60 B3 
+			5D A0 71 0C 
+			28 00 FF 36 
+			F0 11 30 03 
+			00 00 00 0C 
+		];
+	};
+};
