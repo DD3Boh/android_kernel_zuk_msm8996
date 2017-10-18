@@ -1,0 +1,45 @@
+&mdss_dsi1 {
+	/delete-property/ qcom,dsi-pref-prim-pan;
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	/delete-property/ pinctrl-1;
+	/delete-property/ qcom,platform-te-gpio;
+	/delete-property/ qcom,platform-reset-gpio;
+	/delete-property/ qcom,platform-bklight-en-gpio;
+};
+
+&mdss_dsi1 {
+	compatible = "qcom,mdss-dsi-ctrl-notuse";
+};
+
+&dsi_panel_pwr_supply {
+	qcom,panel-supply-entry@0 {
+		qcom,supply-post-on-sleep = <1>;
+		qcom,supply-pre-off-sleep = <3>;
+	};
+	
+	qcom,panel-supply-entry@2 {
+		qcom,supply-post-on-sleep = <1>;
+		qcom,supply-pre-off-sleep = <1>;
+	};
+};
+
+&spi_0{
+	status = "disabled";
+};
+
+&mdss_dsi {
+	hw-config = "single_dsi";
+};
+
+&dsi_dual_sharp_video {
+	qcom,cont-splash-disabled;
+};
+
+&dsi_dual_nt35597_video {
+	qcom,cont-splash-disabled;
+};
+
+&dsi_dual_nt35597_cmd {
+	qcom,cont-splash-enabled;
+};

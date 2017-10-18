@@ -1,0 +1,100 @@
+&soc {
+	i2c@7575000 {
+		cc_logic@01 {
+			compatible = "typec,cclogic";
+			reg = <0x01>;
+			vcc_i2c-supply = <&pm8994_s4>;
+			vcc_otg-supply = <&smbcharger_charger_otg>;/* use for otg power */
+			interrupt-parent = <&tlmm>;
+			interrupts = <1 0x2>;
+
+			cc_logic,irq-working = <&tlmm 1 0x02>; //for 0x8 low_level interrupt, 0x2 falling_edge
+			cc_logic,irq-plug = <&tlmm 11 0x3>;//for both edge
+
+			cc_logic,power-control = <&tlmm 12 0x00>;
+
+			cc_logic,function-switch-gpio2 = <&tlmm 33 0x00>;
+			cc_logic,i2c-pull-up;
+			pinctrl-names = "cc_active", "cc_sleep";
+			pinctrl-0 = <&cclogic_defaultnone_active &cclogic_defaulthigh_active &cclogic_hold_active>;
+			pinctrl-1 = <&cclogic_defaultnone_suspend &cclogic_defaulthigh_suspend &cclogic_hold_suspend>;
+			cclogic,chip1 {
+				cc_logic,power-active-high;
+				chip-name = "pericom,pi5usb30216d";
+				chip-address = <0x1d>;
+			};
+			cclogic,chip2 {
+				cc_logic,power-active-high;
+				chip-name = "ti,tusb320hai";
+				chip-address = <0x47>;
+			};
+		};
+	};
+};
+
+&tlmm {
+	tlmm_gpio_key {
+		cclogic_defaulthigh_active: cclogic_defaulthigh_active {
+			mux {
+				pins = "gpio1", "gpio11";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio1", "gpio11";
+				drive-strength = <0x6>;
+				bias-pull-up;
+			};
+		};
+		cclogic_defaulthigh_suspend: cclogic_defaulthigh_suspend {
+			mux {
+				pins = "gpio1", "gpio11";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio1", "gpio11";
+				drive-strength = <0x2>;
+				bias-pull-up;
+			};
+		};
+		cclogic_defaultnone_active: cclogic_defaultnone_active {
+			mux {
+				function = "gpio";
+			};
+			config {
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+		cclogic_defaultnone_suspend: cclogic_defaultnone_suspend {
+			mux {
+				function = "gpio";
+			};
+			config {
+				drive-strength = <0x2>;
+				bias-disable;
+			};
+		};
+		cclogic_hold_active: cclogic_hold_active {
+			mux {
+				pins = "gpio12";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio12";
+				drive-strength = <0x2>;
+				bias-disable;
+			};
+		};
+		cclogic_hold_suspend: cclogc_hold_suspend {
+			mux {
+				pins = "gpio12";
+				function = "gpio";
+			};
+			config {
+				pins = "gpio12";
+				drive-strength = <0x2>;
+				bias-bus-hold;
+			};
+		};
+	};
+};

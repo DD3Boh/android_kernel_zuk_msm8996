@@ -1,0 +1,121 @@
+#include "batterydata-z2_plus-3500mah.dtsi"
+
+#include "common.dtsi"
+#include "dsi-panel-tianma-1080p-video.dtsi"
+#include "z2_plus-camera-sensor.dtsi"
+
+&dsi_tianma_otm1901a_vid {
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_pwm";
+	qcom,mdss-dsi-bl-pmic-pwm-frequency = <100>;
+	qcom,mdss-dsi-bl-pmic-bank-select = <3>;
+	qcom,mdss-dsi-pwm-gpio = <&pmi8994_mpps 1 0>;
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,cont-splash-enabled;
+};
+
+&usb3 {
+	maximum-speed = "high-speed";
+};
+
+&mdss_dsi0 {
+	qcom,platform-bklight-en-gpio = <&pm8994_gpios 22 0>;
+	/delete-property/ qcom,platform-te-gpio;
+	qcom,dsi-pref-prim-pan = <&dsi_tianma_otm1901a_vid >;
+};
+
+&dsi_tianma_otm1901a_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&soc {
+	i2c@75b6000 {
+		goodix@5d {
+			compatible = "goodix,gt9xx";
+			reg = <0x5d>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <125 0x2008>;
+			vdd_ana-supply = <&pm8994_l14>;
+			vcc_i2c-supply = <&pm8994_l22>;
+			/* pins used by touchscreen */
+			pinctrl-names = "ts_active","ts_suspend";
+			pinctrl-0 = <&ts_active>;
+			pinctrl-1 = <&ts_suspend>;
+			goodix,rst-gpio = <&tlmm 9 0x0>;
+			goodix,irq-gpio = <&tlmm 125 0x2008>;
+			//goodix,ldo-en-gpio = <&msmgpio 15 0x00>;
+			goodix,panel-coords = <0 0 720 1280>;
+			goodix,display-coords = <0 0 720 1280>;
+			goodix,button-map= <158 172 139>;
+			goodix,family-id = <0x0>;
+			goodix,cfg-group0 = [
+				45 38 04 80 07 0A 35 30 01 CA 2A 08 5A 32 03 04 00 00 00 00 12 11 00 15
+				18 1D 14 8B 2B 0D 4B 4D D3 07 D3 07 00 41 33 11 00 00 00 00 00 00 00 0A
+				08 00 41 2D 64 94 80 02 00 00 00 04 A7 30 00 91 39 00 82 43 00 75 4E 00
+				6A 5C 00 6A 00 00 00 00 00 00 00 00 00 00 05 01 00 00 00 00 00 00 00 02
+				00 00 00 00 00 00 00 00 00 08 3C 00 00 00 00 1E 02 04 06 08 0A 0C 0E 10
+				12 14 16 18 1A FF 00 10 0E 00 00 28 00 00 00 00 00 18 0C 00 00 00 00 02
+				04 06 08 0A 0C 0F 10 12 13 26 24 22 21 20 1F 1E 1D 1C 18 16 FF FF FF FF
+				00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 49 01];
+		};
+	};
+	
+	i2c@7575000 {
+		cc_logic@01 {
+			cc_logic,usb-ss-gpio = <&tlmm 0 0x00>;
+			cc_logic,function-switch-gpio1 = <&tlmm 123 0x00>;
+		};
+	};
+};
+
+&cclogic_defaultnone_active {
+	mux {
+		pins = "gpio0", "gpio33", "gpio123";
+	};
+	config {
+		pins = "gpio0", "gpio33", "gpio123";
+	};
+};
+
+&cclogic_defaultnone_suspend {
+	mux {
+		pins = "gpio0", "gpio33", "gpio123";
+	};
+	config {
+		pins = "gpio0", "gpio33", "gpio123";
+	};
+};
+
+&cclogic_hold_active {
+	mux {
+		pins = "gpio12";
+	};
+	config {
+		pins = "gpio12";
+	};
+};
+
+&pmi8994_fg {
+	qcom,fg-iterm-ma = <125>;
+};
+
+&ibb_regulator {
+	qcom,qpnp-ibb-init-voltage = <5000000>;
+	qcom,qpnp-lab-init-amoled-voltage = <4600000>;
+	qcom,qpnp-ibb-init-lcd-voltage = <5000000>;
+};
+
+&lab_regulator {
+	qcom,qpnp-lab-init-voltage = <5000000>;
+	qcom,qpnp-lab-init-amoled-voltage = <4600000>;
+	qcom,qpnp-lab-init-lcd-voltage = <5000000>;
+};
+
+&pmi8994_haptics {
+	qcom,actuator-type = "erm";
+	qcom,vmax-mv = <3200>;
+	qcom,wave-shape = "square";
+	//qcom,wave-play-rate-us = <5263>;//0~20475
+	qcom,ilim-ma = <105>;
+	qcom,int-pwm-freq-khz = <253>;//lowest:253Khz
+};

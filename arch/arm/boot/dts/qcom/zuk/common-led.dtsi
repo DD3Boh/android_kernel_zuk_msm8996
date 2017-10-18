@@ -1,0 +1,29 @@
+&red_led {
+	linux,name = "led:rgb_red";
+	qcom,start-idx=<0>;
+	qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
+	qcom,duty-pcts1=[00 16];
+	qcom,lut-flags=<17>;
+	qcom,pause-lo=<3000>;
+	/delete-property/ inux,default-trigger;
+};
+
+&green_led {
+	linux,name = "led:rgb_green";
+	qcom,start-idx=<0>;
+	qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
+	qcom,duty-pcts1=[00 16];
+	qcom,lut-flags=<17>;
+	qcom,pause-lo=<3000>;
+	/delete-property/ linux,default-trigger;
+};
+
+&blue_led {
+	linux,name = "led:rgb_blue";
+	qcom,start-idx=<0>;
+	qcom,duty-pcts=[00 12 24 36 48 63 63 63 48 36 24 12 00];
+	qcom,duty-pcts1=[00 16];
+	qcom,lut-flags=<17>;
+	qcom,pause-lo=<3000>;
+	/delete-property/ linux,default-trigger;
+};
