@@ -327,5 +327,5 @@ config SUSPEND_TIME
 	  /sys/kernel/debug/suspend_time
 
 config DEDUCE_WAKEUP_REASONS
-	bool
+	bool "Deduce wakeup reasons"
 	default n
