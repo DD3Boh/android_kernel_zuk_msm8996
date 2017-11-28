@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -529,6 +529,12 @@ static int32_t msm_actuator_piezo_move_focus(
 	if (num_steps <= 0 || num_steps > MAX_NUMBER_OF_STEPS) {
 		pr_err("num_steps out of range = %d\n",
 			num_steps);
+		return -EFAULT;
+	}
+
+	if (dest_step_position > a_ctrl->total_steps) {
+		pr_err("Step pos greater than total steps = %d\n",
+			dest_step_position);
 		return -EFAULT;
 	}
 
@@ -1525,11 +1531,13 @@ static long msm_actuator_subdev_ioctl(struct v4l2_subdev *sd,
 			pr_err("a_ctrl->i2c_client.i2c_func_tbl NULL\n");
 			return -EINVAL;
 		}
+		mutex_lock(a_ctrl->actuator_mutex);
 		rc = msm_actuator_power_down(a_ctrl);
 		if (rc < 0) {
 			pr_err("%s:%d Actuator Power down failed\n",
 					__func__, __LINE__);
 		}
+		mutex_unlock(a_ctrl->actuator_mutex);
 		return msm_actuator_close(sd, NULL);
 	default:
 		return -ENOIOCTLCMD;
