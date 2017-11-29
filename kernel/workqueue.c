@@ -1729,6 +1729,7 @@ static struct worker *create_worker(struct worker_pool *pool)
 
 	set_user_nice(worker->task, pool->attrs->nice);
 	kthread_bind_mask(worker->task, pool->attrs->cpumask);
+	worker->task->kthread_per_cpu = true;
 
 	/* successful, attach the worker to the pool */
 	worker_attach_to_pool(worker, pool);
