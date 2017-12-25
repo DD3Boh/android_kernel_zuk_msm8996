@@ -18,7 +18,6 @@
 		/delete-property/ i2c12;
 		/delete-property/ spi12;
 	};
-	/delete-node/ firmware;
 };
 
 &soc {
