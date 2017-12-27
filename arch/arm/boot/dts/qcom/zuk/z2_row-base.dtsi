@@ -248,3 +248,14 @@
 	qcom,wave-play-rate-us = <4166>;
 	qcom,ilim-ma = <85>;	
 };
+
+&firmware {
+	android {
+		fstab {
+			system {
+				dev = "/dev/block/platform/soc/624000.ufshc/by-name/system";
+			};
+		};
+	};
+};
+
