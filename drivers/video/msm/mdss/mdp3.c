@@ -2184,6 +2184,12 @@ void mdp3_release_splash_memory(struct msm_fb_data_type *mfd)
 {
 	/* Give back the reserved memory to the system */
 	if (mdp3_res->splash_mem_addr) {
+		if ((mfd->panel.type == MIPI_VIDEO_PANEL) &&
+				(mdp3_res->cont_splash_en)) {
+			mdss_smmu_unmap(MDSS_IOMMU_DOMAIN_UNSECURE,
+				mdp3_res->splash_mem_addr,
+				mdp3_res->splash_mem_size);
+		}
 		mdp3_free(mfd);
 		pr_debug("mdp3_release_splash_memory\n");
 		memblock_free(mdp3_res->splash_mem_addr,
@@ -2356,6 +2362,7 @@ static int mdp3_panel_register_done(struct mdss_panel_data *pdata)
 	if (pdata->panel_info.cont_splash_enabled == false)
 		mdp3_res->allow_iommu_update = true;
 
+	mdss_res->pdata = pdata;
 	return rc;
 }
 
@@ -2441,6 +2448,7 @@ static int mdp3_debug_init(struct platform_device *pdev)
 	mdss_res->mdss_util = mdp3_res->mdss_util;
 
 	mdata->debug_inf.debug_enable_clock = mdp3_debug_enable_clock;
+	mdata->mdp_rev = mdp3_res->mdp_rev;
 
 	rc = mdss_debugfs_init(mdata);
 	if (rc)
