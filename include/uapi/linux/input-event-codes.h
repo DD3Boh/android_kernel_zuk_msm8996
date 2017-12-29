@@ -301,6 +301,10 @@
 #define KEY_BRIGHTNESSUP	225
 #define KEY_MEDIA		226
 
+#define KEY_NAVI_RIGHT  249
+#define KEY_NAVI_LEFT   254
+#define KEY_NAVI_LONG   183
+
 #define KEY_SWITCHVIDEOMODE	227	/* Cycle between available video
 					   outputs (Monitor/LCD/TV-out/etc) */
 #define KEY_KBDILLUMTOGGLE	228
@@ -580,6 +584,14 @@
 #define KEY_CAMERA_DOWN		0x218
 #define KEY_CAMERA_LEFT		0x219
 #define KEY_CAMERA_RIGHT	0x21a
+#define KEY_GESTURE_C  0x21b
+#define KEY_GESTURE_LR 0x21c
+#define KEY_GESTURE_RL 0x21d
+#define KEY_GESTURE_DT 0x21e
+#define KEY_GESTURE_V  0x21f
+#define KEY_GESTURE_E  0x220
+#define KEY_GESTURE_M  0x221
+#define KEY_GESTURE_W  0x222
 
 #define KEY_ATTENDANT_ON	0x21b
 #define KEY_ATTENDANT_OFF	0x21c
