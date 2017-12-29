@@ -9031,11 +9031,15 @@ static void hdd_update_tgt_vht_cap(hdd_context_t *hdd_ctx,
         value = 0;
     }
 
+    /* check and update MU BEAMFORMEE capability*/
+    if (pconfig->enableMuBformee && !cfg->vht_mu_bformee)
+        pconfig->enableMuBformee = cfg->vht_mu_bformee;
+
     /* set VHT MU Beamformee cap */
     if (value && !cfg->vht_mu_bformee) {
         status = ccmCfgSetInt(hdd_ctx->hHal,
                               WNI_CFG_VHT_MU_BEAMFORMEE_CAP,
-                              cfg->vht_mu_bformee, NULL,
+                              pconfig->enableMuBformee, NULL,
                               eANI_BOOLEAN_FALSE);
 
         if (status == eHAL_STATUS_FAILURE) {
@@ -11651,6 +11655,29 @@ hdd_adapter_t *hdd_open_adapter(hdd_context_t *hdd_ctx,
 	}
 
 	if (VOS_FTM_MODE != vos_get_conparam()) {
+		uint32_t cca_threshold;
+
+		cca_threshold = hdd_ctx->cfg_ini->cca_threshold_2g |
+				hdd_ctx->cfg_ini->cca_threshold_5g << 8;
+
+		if (hdd_ctx->cfg_ini->cca_threshold_enable) {
+			hddLog(VOS_TRACE_LEVEL_DEBUG,
+			       "%s: CCA Threshold is enabled.", __func__);
+			ret = process_wma_set_command((int)adapter->sessionId,
+					WMI_PDEV_PARAM_CCA_THRESHOLD,
+					cca_threshold,
+					PDEV_CMD);
+		} else {
+			ret = 0;
+		}
+
+		if (ret != 0) {
+			hddLog(VOS_TRACE_LEVEL_ERROR,
+			       "%s: WMI_PDEV_PARAM_CCA_THRESHOLD set failed %d",
+			       __func__, ret);
+			goto err_post_add_adapter;
+		}
+
 		ret = process_wma_set_command((int)adapter->sessionId,
 			      (int)WMI_PDEV_PARAM_HYST_EN,
 			      (int)hdd_ctx->cfg_ini->enableMemDeepSleep,
@@ -16512,6 +16539,10 @@ int hdd_wlan_startup(struct device *dev, v_VOID_t *hif_sc)
       hdd_set_idle_ps_config(pHddCtx, TRUE);
    }
 
+   if ((pHddCtx->cfg_ini->enable_ac_txq_optimize >> 4) & 0x01)
+      sme_set_ac_txq_optimize(pHddCtx->hHal,
+                              &pHddCtx->cfg_ini->enable_ac_txq_optimize);
+
    if (pHddCtx->cfg_ini->enable_go_cts2self_for_sta)
        sme_set_cts2self_for_p2p_go(pHddCtx->hHal);
 
@@ -18836,6 +18867,7 @@ void wlan_hdd_check_sta_ap_concurrent_ch_intf(void *data)
     tHalHandle hHal;
     hdd_ap_ctx_t *pHddApCtx;
     uint16_t intf_ch = 0, vht_channel_width = 0;
+    eCsrBand orig_band, new_band;
 
    if ((pHddCtx->cfg_ini->WlanMccToSccSwitchMode == VOS_MCC_TO_SCC_SWITCH_DISABLE)
        || !(vos_concurrent_open_sessions_running()
@@ -18860,12 +18892,37 @@ void wlan_hdd_check_sta_ap_concurrent_ch_intf(void *data)
     if (intf_ch == 0)
         return;
 
+    if (pHddApCtx->sapConfig.band_switch_enable) {
+        if (pHddApCtx->sapConfig.channel > MAX_2_4GHZ_CHANNEL) {
+            orig_band = eCSR_BAND_5G;
+        } else {
+            orig_band = eCSR_BAND_24;
+        }
+
+        if (intf_ch > MAX_2_4GHZ_CHANNEL) {
+            new_band = eCSR_BAND_5G;
+        } else {
+            new_band = eCSR_BAND_24;
+        }
+
+        if (orig_band != new_band) {
+            if (new_band == eCSR_BAND_5G) {
+                pHddApCtx->sapConfig.ch_width_orig =
+                    pHddApCtx->sapConfig.ch_width_5g_orig;
+            } else {
+                pHddApCtx->sapConfig.ch_width_orig =
+                    pHddApCtx->sapConfig.ch_width_24g_orig;
+            }
+        }
+    }
+
     hddLog(VOS_TRACE_LEVEL_INFO,
         FL("SAP restarts due to MCC->SCC switch, orig chan: %d, new chan: %d"),
         pHddApCtx->sapConfig.channel, intf_ch);
 
     pHddApCtx->sapConfig.channel = intf_ch;
     pHddApCtx->bss_stop_reason = BSS_STOP_DUE_TO_MCC_SCC_SWITCH;
+
     sme_SelectCBMode(hHal,
                      pHddApCtx->sapConfig.SapHw_mode,
                      pHddApCtx->sapConfig.channel,

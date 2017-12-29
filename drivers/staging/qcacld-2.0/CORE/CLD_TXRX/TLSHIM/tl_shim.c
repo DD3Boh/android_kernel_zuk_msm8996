@@ -597,10 +597,10 @@ static int tlshim_mgmt_rx_process(void *context, u_int8_t *data,
 	}
 
 	if (hdr->buf_len < sizeof(struct ieee80211_frame) ||
-		hdr->buf_len > data_len) {
+	   (!saved_beacon && hdr->buf_len > data_len)) {
 		adf_os_spin_unlock_bh(&tl_shim->mgmt_lock);
-		TLSHIM_LOGE("Invalid rx mgmt packet, data_len %u, hdr->buf_len %u",
-				data_len, hdr->buf_len);
+		TLSHIM_LOGE("Invalid rx mgmt packet, saved_beacon %d, data_len %u, hdr->buf_len %u",
+				saved_beacon, data_len, hdr->buf_len);
 		return 0;
 	}
 
@@ -641,6 +641,17 @@ static int tlshim_mgmt_rx_process(void *context, u_int8_t *data,
 	rx_pkt->pkt_meta.mpdu_len = hdr->buf_len;
 	rx_pkt->pkt_meta.mpdu_data_len = hdr->buf_len -
 					 rx_pkt->pkt_meta.mpdu_hdr_len;
+
+	/*
+	 * If the mpdu_data_len is greater than Max (2k), drop the frame
+	 */
+	if (rx_pkt->pkt_meta.mpdu_data_len > WMA_MAX_MGMT_MPDU_LEN) {
+		adf_os_spin_unlock_bh(&tl_shim->mgmt_lock);
+		TLSHIM_LOGE("Data Len %d greater than max, dropping frame",
+			 rx_pkt->pkt_meta.mpdu_data_len);
+		vos_mem_free(rx_pkt);
+		return 0;
+	}
 
     /*
      * saved_beacon means this beacon is a duplicate of one

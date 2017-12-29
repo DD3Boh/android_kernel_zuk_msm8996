@@ -1209,6 +1209,11 @@ typedef struct sSirSmeJoinReq
     struct cds_fils_connection_info fils_con_info;
 #endif
     tSirBssDescription  bssDescription;
+    /*
+     * WARNING: Pls make bssDescription as last variable in struct
+     * tSirSmeJoinReq as it has ieFields followed after this bss
+     * description. Adding a variable after this corrupts the ieFields
+     */
 } tSirSmeJoinReq, *tpSirSmeJoinReq;
 
 /* Definition for response message to previously issued join request */
@@ -6391,6 +6396,8 @@ typedef struct
     tANI_U32 contentionTimeAvg;
     /* num of data pkts used for contention statistics */
     tANI_U32 contentionNumSamples;
+    /* num of pending msdu */
+    tANI_U32 pending_msdu;
 } tSirWifiWmmAcStat, *tpSirWifiWmmAcStat;
 
 /* Interface statistics - corresponding to 2nd most
@@ -8457,6 +8464,18 @@ struct sme_long_retry_limit {
 struct sme_sta_inactivity_timeout {
 	uint8_t session_id;
 	uint32_t sta_inactivity_timeout;
+};
+
+/**
+ * struct sme_flush_pending - flush pending packets with specified tids
+ * @vdev_id: vdev Id.
+ * @peer_addr: peer mac address.
+ * @flush_ac: access category pending packets using
+ */
+struct sme_flush_pending {
+	uint8_t session_id;
+	v_MACADDR_t  peer_addr;
+	uint8_t flush_ac;
 };
 
 /**
