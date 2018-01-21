@@ -510,6 +510,10 @@ struct cfs_rq {
 	struct list_head leaf_cfs_rq_list;
 	struct task_group *tg;	/* group that "owns" this runqueue */
 
+#ifdef CONFIG_SCHED_WALT
+	u64 cumulative_runnable_avg;
+#endif
+
 #ifdef CONFIG_CFS_BANDWIDTH
 
 #ifdef CONFIG_SCHED_HMP
@@ -817,7 +821,17 @@ struct rq {
 #endif
 
 #ifdef CONFIG_SCHED_WALT
+	/*
+	 * max_freq = user or thermal defined maximum
+	 * max_possible_freq = maximum supported by hardware
+	 */
+	unsigned int cur_freq, max_freq, min_freq, max_possible_freq;
+	struct cpumask freq_domain_cpumask;
 	u64 cumulative_runnable_avg;
+	int efficiency; /* Differentiate cpus with different IPC capability */
+	int load_scale_factor;
+	int capacity;
+	int max_possible_capacity;
 	u64 window_start;
 	u64 curr_runnable_sum;
 	u64 prev_runnable_sum;
@@ -2410,9 +2424,10 @@ static inline unsigned long __cpu_util(int cpu, int delta)
 	unsigned long capacity = capacity_orig_of(cpu);
 
 #ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
-		util = div64_u64(cpu_rq(cpu)->cumulative_runnable_avg,
-				 walt_ravg_window >> SCHED_LOAD_SHIFT);
+	if (!walt_disabled && sysctl_sched_use_walt_cpu_util) {
+		util = cpu_rq(cpu)->prev_runnable_sum << SCHED_LOAD_SHIFT;
+		do_div(util, walt_ravg_window);
+	}
 #endif
 
 	delta += util;

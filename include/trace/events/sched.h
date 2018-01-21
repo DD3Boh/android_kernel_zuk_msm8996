@@ -1901,6 +1901,7 @@ TRACE_EVENT(walt_update_task_ravg,
 		__array(	char,	comm,   TASK_COMM_LEN	)
 		__field(	pid_t,	pid			)
 		__field(	pid_t,	cur_pid			)
+		__field(unsigned int,	cur_freq		)
 		__field(	u64,	wallclock		)
 		__field(	u64,	mark_start		)
 		__field(	u64,	delta_m			)
@@ -1928,6 +1929,7 @@ TRACE_EVENT(walt_update_task_ravg,
 		__entry->evt            = evt;
 		__entry->cpu            = rq->cpu;
 		__entry->cur_pid        = rq->curr->pid;
+		__entry->cur_freq       = rq->cur_freq;
 		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
 		__entry->pid            = p->pid;
 		__entry->mark_start     = p->ravg.mark_start;
@@ -1946,10 +1948,11 @@ TRACE_EVENT(walt_update_task_ravg,
 		__entry->active_windows	= p->ravg.active_windows;
 	),
 
-	TP_printk("wc %llu ws %llu delta %llu event %d cpu %d cur_pid %d task %d (%s) ms %llu delta %llu demand %u sum %u irqtime %llu"
+	TP_printk("wc %llu ws %llu delta %llu event %d cpu %d cur_freq %u cur_pid %d task %d (%s) ms %llu delta %llu demand %u sum %u irqtime %llu"
 		" cs %llu ps %llu util %lu cur_window %u prev_window %u active_wins %u"
 		, __entry->wallclock, __entry->win_start, __entry->delta,
-		__entry->evt, __entry->cpu, __entry->cur_pid,
+		__entry->evt, __entry->cpu,
+		__entry->cur_freq, __entry->cur_pid,
 		__entry->pid, __entry->comm, __entry->mark_start,
 		__entry->delta_m, __entry->demand,
 		__entry->sum, __entry->irqtime,
@@ -1973,7 +1976,7 @@ TRACE_EVENT(walt_update_history,
 		__field(	 int,	samples			)
 		__field(	 int,	evt			)
 		__field(	 u64,	demand			)
-		__field(	 u64,	walt_avg		)
+		__field(unsigned int,	walt_avg		)
 		__field(unsigned int,	pelt_avg		)
 		__array(	 u32,	hist, RAVG_HIST_SIZE_MAX)
 		__field(	 int,	cpu			)
@@ -1986,7 +1989,8 @@ TRACE_EVENT(walt_update_history,
 		__entry->samples        = samples;
 		__entry->evt            = evt;
 		__entry->demand         = p->ravg.demand;
-		__entry->walt_avg = (__entry->demand << 10) / walt_ravg_window,
+		__entry->walt_avg	= (__entry->demand << 10);
+		do_div(__entry->walt_avg, walt_ravg_window);
 		__entry->pelt_avg	= p->se.avg.util_avg;
 		memcpy(__entry->hist, p->ravg.sum_history,
 					RAVG_HIST_SIZE_MAX * sizeof(u32));
@@ -1994,7 +1998,7 @@ TRACE_EVENT(walt_update_history,
 	),
 
 	TP_printk("%d (%s): runtime %u samples %d event %d demand %llu"
-		" walt %llu pelt %u (hist: %u %u %u %u %u) cpu %d",
+		" walt %u pelt %u (hist: %u %u %u %u %u) cpu %d",
 		__entry->pid, __entry->comm,
 		__entry->runtime, __entry->samples, __entry->evt,
 		__entry->demand,
