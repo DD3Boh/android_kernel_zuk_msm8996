@@ -617,7 +617,7 @@ static void cclogic_func_set(struct cclogic_platform *p,enum cclogic_func_type f
 	case CCLOGIC_FUNC_AUDIO:
 		gpio_set_value_cansleep(p->function_switch_gpio2,0);
 		if (gpio_is_valid(p->function_switch_gpio1)){
-#ifdef CONFIG_PRODUCT_Z2_PLUS
+#ifdef CONFIG_MACH_ZUK_Z2_PLUS
 			gpio_set_value_cansleep(p->function_switch_gpio1,0);
 #else
 			gpio_set_value_cansleep(p->function_switch_gpio1,1);
