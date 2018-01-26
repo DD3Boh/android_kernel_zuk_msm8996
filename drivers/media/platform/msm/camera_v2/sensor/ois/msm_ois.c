@@ -252,6 +252,8 @@ static int32_t msm_ois_write_settings(struct msm_ois_ctrl_t *o_ctrl,
 					settings[i].reg_data,
 					settings[i].data_type,
 					settings[i].delay);
+				if (rc != 0)
+					rc = -EINVAL;
 				break;
 
 			default:
