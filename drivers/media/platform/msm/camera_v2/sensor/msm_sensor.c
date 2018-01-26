@@ -892,6 +892,32 @@ static int msm_sensor_config32(struct msm_sensor_ctrl_t *s_ctrl,
 		}
 		break;
 	}
+	case CFG_RELEASE_CCI: {
+	  if(s_ctrl->sensor_device_type == MSM_CAMERA_PLATFORM_DEVICE){
+		  rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			  i2c_util(s_ctrl->sensor_i2c_client, MSM_CCI_RELEASE);
+		  if (rc < 0)
+			  pr_err("MSM_CCI_RELEASE failed");
+	  }
+	  else{
+		  rc = -EINVAL;
+		  pr_err("CFG_RELEASE_CCI not support");
+	  }
+	  break;
+    }
+	case CFG_INIT_CCI: {
+	  if(s_ctrl->sensor_device_type == MSM_CAMERA_PLATFORM_DEVICE){
+		  rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			  i2c_util(s_ctrl->sensor_i2c_client, MSM_CCI_INIT);
+		  if (rc < 0)
+			  pr_err("MSM_CCI_RELEASE failed");
+	  }
+	  else{
+		  rc = -EINVAL;
+		  pr_err("CFG_INIT_CCI not support");
+	  }
+	  break;
+    }
 
 	default:
 		rc = -EFAULT;
@@ -1379,6 +1405,32 @@ int msm_sensor_config(struct msm_sensor_ctrl_t *s_ctrl, void __user *argp)
 		}
 		break;
 	}
+	case CFG_RELEASE_CCI: {
+	  if(s_ctrl->sensor_device_type == MSM_CAMERA_PLATFORM_DEVICE){
+		  rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			  i2c_util(s_ctrl->sensor_i2c_client, MSM_CCI_RELEASE);
+		  if (rc < 0)
+			  pr_err("MSM_CCI_RELEASE failed");
+	  }
+	  else{
+		  rc = -EINVAL;
+		  pr_err("CFG_RELEASE_CCI not support");
+	  }
+	  break;
+    }
+	case CFG_INIT_CCI: {
+	  if(s_ctrl->sensor_device_type == MSM_CAMERA_PLATFORM_DEVICE){
+		  rc = s_ctrl->sensor_i2c_client->i2c_func_tbl->
+			  i2c_util(s_ctrl->sensor_i2c_client, MSM_CCI_INIT);
+		  if (rc < 0)
+			  pr_err("MSM_CCI_RELEASE failed");
+	  }
+	  else{
+		  rc = -EINVAL;
+		  pr_err("CFG_INIT_CCI not support");
+	  }
+	  break;
+    }
 
 	default:
 		rc = -EFAULT;
