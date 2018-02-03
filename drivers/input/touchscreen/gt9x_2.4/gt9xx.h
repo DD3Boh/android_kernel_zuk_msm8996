@@ -59,8 +59,6 @@
 #define GTP_HEADER_FW_UPDATE  1    // auto update fw by gtp_default_FW in gt9xx_firmware.h, function together with GTP_AUTO_UPDATE
 #define GTP_AUTO_UPDATE_CFG   0    // auto update config by .cfg file, function together with GTP_AUTO_UPDATE
 
-#define GTP_COMPATIBLE_MODE   0    // compatible with GT9XXF
-
 #define GTP_CREATE_WR_NODE    1
 #define GTP_ESD_PROTECT       1    // esd protection with a cycle of 2 seconds
 
@@ -74,14 +72,6 @@
 #define GTP_DEBUG_FUNC_ON     0
 
 #define TOUCH_SYS	      1	   //Added touch node for settings (gesture wake)
-
-#if GTP_COMPATIBLE_MODE
-typedef enum
-{
-    CHIP_TYPE_GT9  = 0,
-    CHIP_TYPE_GT9F = 1,
-} CHIP_TYPE_T;
-#endif
 
 struct goodix_ts_data {
     spinlock_t irq_lock;
@@ -126,14 +116,6 @@ struct goodix_ts_data {
     spinlock_t esd_lock;
     u8  esd_running;
     s32 clk_tick_cnt;
-#endif
-#if GTP_COMPATIBLE_MODE
-    u16 bak_ref_len;
-    s32 ref_chk_fs_times;
-    s32 clk_chk_fs_times;
-    CHIP_TYPE_T chip_type;
-    u8 rqst_processing;
-    u8 is_950;
 #endif
     
 };
