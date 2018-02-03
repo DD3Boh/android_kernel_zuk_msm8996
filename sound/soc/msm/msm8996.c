@@ -65,7 +65,9 @@
 #define WSA8810_NAME_2 "wsa881x.20170212"
 #define NCX_VTG_MIN_UV	3000000
 #define NCX_VTG_MAX_UV	3000000
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
 #define QUAT_MI2S_ENABLE
+#endif
 #ifdef QUAT_MI2S_ENABLE
 atomic_t quat_mi2s_rsc_ref;
 atomic_t quat_mi2s_clk_ref;
