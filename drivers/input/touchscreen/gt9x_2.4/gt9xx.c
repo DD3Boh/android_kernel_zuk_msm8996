@@ -86,23 +86,6 @@ static s32 gtp_init_ext_watchdog(struct i2c_client *client);
 void gtp_esd_switch(struct i2c_client *, s32);
 #endif
 
-//*********** For GT9XXF Start **********//
-#if GTP_COMPATIBLE_MODE
-extern s32 i2c_read_bytes(struct i2c_client *client, u16 addr, u8 *buf, s32 len);
-extern s32 i2c_write_bytes(struct i2c_client *client, u16 addr, u8 *buf, s32 len);
-extern s32 gup_clk_calibration(void);
-extern s32 gup_fw_download_proc(void *dir, u8 dwn_mode);
-extern u8 gup_check_fs_mounted(char *path_name);
-
-void gtp_recovery_reset(struct i2c_client *client);
-static s32 gtp_esd_recovery(struct i2c_client *client);
-s32 gtp_fw_startup(struct i2c_client *client);
-static s32 gtp_main_clk_proc(struct goodix_ts_data *ts);
-static s32 gtp_bak_ref_proc(struct goodix_ts_data *ts, u8 mode);
-
-#endif
-//********** For GT9XXF End **********//
-
 #if GTP_GESTURE_WAKEUP
 typedef enum
 {
@@ -158,9 +141,6 @@ s32 gtp_i2c_read(struct i2c_client *client, u8 *buf, s32 len)
     }
     if((retries >= 5))
     {
-    #if GTP_COMPATIBLE_MODE
-        struct goodix_ts_data *ts = i2c_get_clientdata(client);
-    #endif
     
     #if GTP_GESTURE_WAKEUP
         // reset chip would quit doze mode
@@ -170,13 +150,6 @@ s32 gtp_i2c_read(struct i2c_client *client, u8 *buf, s32 len)
         }
     #endif
         GTP_ERROR("I2C Read: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
-    #if GTP_COMPATIBLE_MODE
-        if (CHIP_TYPE_GT9F == ts->chip_type)
-        { 
-            gtp_recovery_reset(client);
-        }
-        else
-    #endif
         {
             gtp_reset_guitar(client, 10);  
         }
@@ -220,9 +193,6 @@ s32 gtp_i2c_write(struct i2c_client *client,u8 *buf,s32 len)
     }
     if((retries >= 5))
     {
-    #if GTP_COMPATIBLE_MODE
-        struct goodix_ts_data *ts = i2c_get_clientdata(client);
-    #endif
     
     #if GTP_GESTURE_WAKEUP
         if (DOZE_ENABLED == doze_status)
@@ -231,13 +201,6 @@ s32 gtp_i2c_write(struct i2c_client *client,u8 *buf,s32 len)
         }
     #endif
         GTP_ERROR("I2C Write: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
-    #if GTP_COMPATIBLE_MODE
-        if (CHIP_TYPE_GT9F == ts->chip_type)
-        { 
-            gtp_recovery_reset(client);
-        }
-        else
-    #endif
         {
             gtp_reset_guitar(client, 10);  
         }
@@ -598,10 +561,6 @@ static void goodix_ts_work_func(struct work_struct *work)
     s32 ret = -1;
     struct goodix_ts_data *ts = NULL;
 
-#if GTP_COMPATIBLE_MODE
-    u8 rqst_buf[3] = {0x80, 0x43};  // for GT9XXF
-#endif
-
 #if GTP_GESTURE_WAKEUP
     u8 doze_buf[3] = {0x81, 0x4B};
 #endif
@@ -701,82 +660,6 @@ static void goodix_ts_work_func(struct work_struct *work)
     
     finger = point_data[GTP_ADDR_LENGTH];
 
-#if GTP_COMPATIBLE_MODE
-    // GT9XXF reques event 
-    if ((finger == 0x00) && (CHIP_TYPE_GT9F == ts->chip_type))     // request arrived
-    {
-        ret = gtp_i2c_read(ts->client, rqst_buf, 3);
-        if (ret < 0)
-        {
-           GTP_ERROR("Read request status error!");
-           goto exit_work_func;
-        } 
-        
-        switch (rqst_buf[2])
-        {
-        case GTP_RQST_CONFIG:
-            GTP_INFO("Request for config.");
-            ret = gtp_send_cfg(ts->client);
-            if (ret < 0)
-            {
-                GTP_ERROR("Request for config unresponded!");
-            }
-            else
-            {
-                rqst_buf[2] = GTP_RQST_RESPONDED;
-                gtp_i2c_write(ts->client, rqst_buf, 3);
-                GTP_INFO("Request for config responded!");
-            }
-            break;
-            
-        case GTP_RQST_BAK_REF:
-            GTP_INFO("Request for backup reference.");
-            ts->rqst_processing = 1;
-            ret = gtp_bak_ref_proc(ts, GTP_BAK_REF_SEND);
-            if (SUCCESS == ret)
-            {
-                rqst_buf[2] = GTP_RQST_RESPONDED;
-                gtp_i2c_write(ts->client, rqst_buf, 3);
-                ts->rqst_processing = 0;
-                GTP_INFO("Request for backup reference responded!");
-            }
-            else
-            {
-                GTP_ERROR("Requeset for backup reference unresponed!");
-            }
-            break;
-            
-        case GTP_RQST_RESET:
-            GTP_INFO("Request for reset.");
-            gtp_recovery_reset(ts->client);
-            break;
-            
-        case GTP_RQST_MAIN_CLOCK:
-            GTP_INFO("Request for main clock.");
-            ts->rqst_processing = 1;
-            ret = gtp_main_clk_proc(ts);
-            if (FAIL == ret)
-            {
-                GTP_ERROR("Request for main clock unresponded!");
-            }
-            else
-            {
-                GTP_INFO("Request for main clock responded!");
-                rqst_buf[2] = GTP_RQST_RESPONDED;
-                gtp_i2c_write(ts->client, rqst_buf, 3);
-                ts->rqst_processing = 0;
-                ts->clk_chk_fs_times = 0;
-            }
-            break;
-            
-        default:
-            GTP_INFO("Undefined request: 0x%02X", rqst_buf[2]);
-            rqst_buf[2] = GTP_RQST_RESPONDED;  
-            gtp_i2c_write(ts->client, rqst_buf, 3);
-            break;
-        }
-    }
-#endif
     if (finger == 0x00)
     {
         if (ts->use_irq)
@@ -1098,9 +981,6 @@ Output:
 *******************************************************/
 void gtp_reset_guitar(struct i2c_client *client, s32 ms)
 {
-#if GTP_COMPATIBLE_MODE
-    struct goodix_ts_data *ts = i2c_get_clientdata(client);
-#endif    
 
     GTP_DEBUG_FUNC();
     GTP_INFO("Guitar reset");
@@ -1115,13 +995,6 @@ void gtp_reset_guitar(struct i2c_client *client, s32 ms)
     msleep(6);                          // T4: > 5ms
 
     GTP_GPIO_AS_INPUT(gtp_rst_gpio);    // end select I2C slave addr
-
-#if GTP_COMPATIBLE_MODE
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        return;
-    }
-#endif
 
     gtp_int_sync(50);  
 #if GTP_ESD_PROTECT
@@ -1186,33 +1059,8 @@ static s8 gtp_enter_sleep(struct goodix_ts_data * ts)
     s8 ret = -1;
     s8 retry = 0;
     u8 i2c_control_buf[3] = {(u8)(GTP_REG_SLEEP >> 8), (u8)GTP_REG_SLEEP, 5};
-
-#if GTP_COMPATIBLE_MODE
-    u8 status_buf[3] = {0x80, 0x44};
-#endif
     
     GTP_DEBUG_FUNC();
-    
-#if GTP_COMPATIBLE_MODE
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        // GT9XXF: host interact with ic
-        ret = gtp_i2c_read(ts->client, status_buf, 3);
-        if (ret < 0)
-        {
-            GTP_ERROR("failed to get backup-reference status");
-        }
-        
-        if (status_buf[2] & 0x80)
-        {
-            ret = gtp_bak_ref_proc(ts, GTP_BAK_REF_STORE);
-            if (FAIL == ret)
-            {
-                GTP_ERROR("failed to store bak_ref");
-            }
-        }
-    }
-#endif
 
     GTP_GPIO_OUTPUT(gtp_int_gpio, 0);
     msleep(5);
@@ -1246,59 +1094,6 @@ static s8 gtp_wakeup_sleep(struct goodix_ts_data * ts)
     s8 ret = -1;
     
     GTP_DEBUG_FUNC();
-
-#if GTP_COMPATIBLE_MODE
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        u8 opr_buf[3] = {0x41, 0x80};
-        
-        GTP_GPIO_OUTPUT(gtp_int_gpio, 1);
-        msleep(5);
-    
-        for (retry = 0; retry < 10; ++retry)
-        {
-            // hold ss51 & dsp
-            opr_buf[2] = 0x0C;
-            ret = gtp_i2c_write(ts->client, opr_buf, 3);
-            if (FAIL == ret)
-            {
-                GTP_ERROR("failed to hold ss51 & dsp!");
-                continue;
-            }
-            opr_buf[2] = 0x00;
-            ret = gtp_i2c_read(ts->client, opr_buf, 3);
-            if (FAIL == ret)
-            {
-                GTP_ERROR("failed to get ss51 & dsp status!");
-                continue;
-            }
-            if (0x0C != opr_buf[2])
-            {
-                GTP_DEBUG("ss51 & dsp not been hold, %d", retry+1);
-                continue;
-            }
-            GTP_DEBUG("ss51 & dsp confirmed hold");
-            
-            ret = gtp_fw_startup(ts->client);
-            if (FAIL == ret)
-            {
-                GTP_ERROR("failed to startup GT9XXF, process recovery");
-                gtp_esd_recovery(ts->client);
-            }
-            break;
-        }
-        if (retry >= 10)
-        {
-            GTP_ERROR("failed to wakeup, processing esd recovery");
-            gtp_esd_recovery(ts->client);
-        }
-        else
-        {
-            GTP_INFO("GT9XXF gtp wakeup success");
-        }
-        return ret;
-    }
-#endif
 
 #if GTP_POWER_CTRL_SLEEP
     while(retry++ < 5)
@@ -1411,13 +1206,7 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
         cfg_info_len[0], cfg_info_len[1], cfg_info_len[2], cfg_info_len[3],
         cfg_info_len[4], cfg_info_len[5]);
 #endif
-    
-#if GTP_COMPATIBLE_MODE
-    if (CHIP_TYPE_GT9F == ts->chip_type) {
-        ts->fw_error = 0;
-    }
-	else
-#endif
+
     {	/* check firmware */
         ret = gtp_i2c_read_dbl_check(ts->client, 0x41E4, opr_buf, 1);
         if (SUCCESS == ret)
@@ -1432,9 +1221,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
     }
 
 	/* read sensor id */
-#if GTP_COMPATIBLE_MODE
-    msleep(50);
-#endif
     ret = gtp_i2c_read_dbl_check(ts->client, GTP_REG_SENSOR_ID, &sensor_id, 1);
     if (SUCCESS == ret)
     {
@@ -1484,9 +1270,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
         return -1;
     }
 
-#if GTP_COMPATIBLE_MODE
-	if (ts->chip_type != CHIP_TYPE_GT9F)
-#endif
 	{
 	    ret = gtp_i2c_read_dbl_check(ts->client, GTP_REG_CONFIG_DATA, &opr_buf[0], 1);
 	    if (ret == SUCCESS) {
@@ -1549,42 +1332,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
         ts->int_trigger_type = (config[TRIGGER_LOC]) & 0x03; 
     }
 
-#if GTP_COMPATIBLE_MODE
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        u8 sensor_num = 0;
-        u8 driver_num = 0;
-        u8 have_key = 0;
-        
-        have_key = (config[GTP_REG_HAVE_KEY - GTP_REG_CONFIG_DATA + 2] & 0x01);
-        
-        if (1 == ts->is_950)
-        {
-            driver_num = config[GTP_REG_MATRIX_DRVNUM - GTP_REG_CONFIG_DATA + 2];
-            sensor_num = config[GTP_REG_MATRIX_SENNUM - GTP_REG_CONFIG_DATA + 2];
-            if (have_key)
-            {
-                driver_num--;
-            }
-            ts->bak_ref_len = (driver_num * (sensor_num - 1) + 2) * 2 * 6;
-        }
-        else
-        {
-            driver_num = (config[CFG_LOC_DRVA_NUM] & 0x1F) + (config[CFG_LOC_DRVB_NUM]&0x1F);
-            if (have_key)
-            {
-                driver_num--;
-            }
-            sensor_num = (config[CFG_LOC_SENS_NUM] & 0x0F) + ((config[CFG_LOC_SENS_NUM] >> 4) & 0x0F);
-            ts->bak_ref_len = (driver_num * (sensor_num - 2) + 2) * 2;
-        }
-    
-        GTP_INFO("Drv * Sen: %d * %d(key: %d), X_MAX: %d, Y_MAX: %d, TRIGGER: 0x%02x",
-           driver_num, sensor_num, have_key, ts->abs_x_max,ts->abs_y_max,ts->int_trigger_type);
-        return 0;
-    }
-    else
-#endif
     {
 #if GTP_DRIVER_SEND_CFG
         ret = gtp_send_cfg(ts->client);
@@ -1592,9 +1339,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
     	{
             GTP_ERROR("Send config error.");
         }
-#if GTP_COMPATIBLE_MODE
-	if (ts->chip_type != CHIP_TYPE_GT9F)
-#endif
 	{
 		if (flash_cfg_version < 90 && flash_cfg_version > drv_cfg_version) {
 			check_sum = 0;
@@ -1913,443 +1657,6 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
     return 0;
 }
 
-//************** For GT9XXF Start *************//
-#if GTP_COMPATIBLE_MODE
-
-s32 gtp_fw_startup(struct i2c_client *client)
-{
-    u8 opr_buf[4];
-    s32 ret = 0;
-    
-    //init sw WDT
-	opr_buf[0] = 0xAA;
-	ret = i2c_write_bytes(client, 0x8041, opr_buf, 1);
-    if (ret < 0)
-    {
-        return FAIL;
-    }
-    
-    //release SS51 & DSP
-    opr_buf[0] = 0x00;
-    ret = i2c_write_bytes(client, 0x4180, opr_buf, 1);
-    if (ret < 0)
-    {
-        return FAIL;
-    }
-    //int sync
-    gtp_int_sync(25);  
-    
-    //check fw run status
-    ret = i2c_read_bytes(client, 0x8041, opr_buf, 1);
-    if (ret < 0)
-    {
-        return FAIL;
-    }
-    if(0xAA == opr_buf[0])
-    {
-        GTP_ERROR("IC works abnormally,startup failed.");
-        return FAIL;
-    }
-    else
-    {
-        GTP_INFO("IC works normally, Startup success.");
-        opr_buf[0] = 0xAA;
-        i2c_write_bytes(client, 0x8041, opr_buf, 1);
-        return SUCCESS;
-    }
-}
-
-static s32 gtp_esd_recovery(struct i2c_client *client)
-{
-    s32 retry = 0;
-    s32 ret = 0;
-    struct goodix_ts_data *ts;
-    
-    ts = i2c_get_clientdata(client);
-    
-    gtp_irq_disable(ts);
-    
-    GTP_INFO("GT9XXF esd recovery mode");
-    for (retry = 0; retry < 5; retry++)
-    {
-        ret = gup_fw_download_proc(NULL, GTP_FL_ESD_RECOVERY); 
-        if (FAIL == ret)
-        {
-            GTP_ERROR("esd recovery failed %d", retry+1);
-            continue;
-        }
-        ret = gtp_fw_startup(ts->client);
-        if (FAIL == ret)
-        {
-            GTP_ERROR("GT9XXF start up failed %d", retry+1);
-            continue;
-        }
-        break;
-    }
-    gtp_irq_enable(ts);
-    
-    if (retry >= 5)
-    {
-        GTP_ERROR("failed to esd recovery");
-        return FAIL;
-    }
-    
-    GTP_INFO("Esd recovery successful");
-    return SUCCESS;
-}
-
-void gtp_recovery_reset(struct i2c_client *client)
-{
-#if GTP_ESD_PROTECT
-    gtp_esd_switch(client, SWITCH_OFF);
-#endif
-    GTP_DEBUG_FUNC();
-    
-    gtp_esd_recovery(client); 
-    
-#if GTP_ESD_PROTECT
-    gtp_esd_switch(client, SWITCH_ON);
-#endif
-}
-
-static s32 gtp_bak_ref_proc(struct goodix_ts_data *ts, u8 mode)
-{
-    s32 ret = 0;
-    s32 i = 0;
-    s32 j = 0;
-    u16 ref_sum = 0;
-    u16 learn_cnt = 0;
-    u16 chksum = 0;
-    s32 ref_seg_len = 0;
-    s32 ref_grps = 0;
-    struct file *ref_filp = NULL;
-    u8 *p_bak_ref;
-    
-    ret = gup_check_fs_mounted("/data");
-    if (FAIL == ret)
-    {
-        ts->ref_chk_fs_times++;
-        GTP_DEBUG("Ref check /data times/MAX_TIMES: %d / %d", ts->ref_chk_fs_times, GTP_CHK_FS_MNT_MAX);
-        if (ts->ref_chk_fs_times < GTP_CHK_FS_MNT_MAX)
-        {
-            msleep(50);
-            GTP_INFO("/data not mounted.");
-            return FAIL;
-        }
-        GTP_INFO("check /data mount timeout...");
-    }
-    else
-    {
-        GTP_INFO("/data mounted!!!(%d/%d)", ts->ref_chk_fs_times, GTP_CHK_FS_MNT_MAX);
-    }
-    
-    p_bak_ref = (u8 *)kzalloc(ts->bak_ref_len, GFP_KERNEL);
-    
-    if (NULL == p_bak_ref)
-    {
-        GTP_ERROR("Allocate memory for p_bak_ref failed!");
-        return FAIL;
-    }
-    
-    if (ts->is_950)
-    {
-        ref_seg_len = ts->bak_ref_len / 6;
-        ref_grps = 6;
-    }
-    else
-    {
-        ref_seg_len = ts->bak_ref_len;
-        ref_grps = 1;
-    }
-    ref_filp = filp_open(GTP_BAK_REF_PATH, O_RDWR | O_CREAT, 0666);
-    if (IS_ERR(ref_filp))
-    { 
-        GTP_ERROR("Failed to open/create %s.", GTP_BAK_REF_PATH);
-        if (GTP_BAK_REF_SEND == mode)
-        {
-            goto bak_ref_default;
-        }
-        else
-        {
-            goto bak_ref_exit;
-        }
-    }
-    
-    switch (mode)
-    {
-    case GTP_BAK_REF_SEND:
-        GTP_INFO("Send backup-reference");
-        ref_filp->f_op->llseek(ref_filp, 0, SEEK_SET);
-        ret = ref_filp->f_op->read(ref_filp, (char*)p_bak_ref, ts->bak_ref_len, &ref_filp->f_pos);
-        if (ret < 0)
-        {
-            GTP_ERROR("failed to read bak_ref info from file, sending defualt bak_ref");
-            goto bak_ref_default;
-        }
-        for (j = 0; j < ref_grps; ++j)
-        {
-            ref_sum = 0;
-            for (i = 0; i < (ref_seg_len); i += 2)
-            {
-                ref_sum += (p_bak_ref[i + j * ref_seg_len] << 8) + p_bak_ref[i+1 + j * ref_seg_len];
-            }
-            learn_cnt = (p_bak_ref[j * ref_seg_len + ref_seg_len -4] << 8) + (p_bak_ref[j * ref_seg_len + ref_seg_len -3]);
-            chksum = (p_bak_ref[j * ref_seg_len + ref_seg_len -2] << 8) + (p_bak_ref[j * ref_seg_len + ref_seg_len -1]);
-            GTP_DEBUG("learn count = %d", learn_cnt);
-            GTP_DEBUG("chksum = %d", chksum);
-            GTP_DEBUG("ref_sum = 0x%04X", ref_sum & 0xFFFF);
-            // Sum(1~ref_seg_len) == 1
-            if (1 != ref_sum)
-            {
-                GTP_INFO("wrong chksum for bak_ref, reset to 0x00 bak_ref");
-                memset(&p_bak_ref[j * ref_seg_len], 0, ref_seg_len);
-                p_bak_ref[ref_seg_len + j * ref_seg_len - 1] = 0x01;
-            }
-            else
-            {
-                if (j == (ref_grps - 1))
-                {
-                    GTP_INFO("backup-reference data in %s used", GTP_BAK_REF_PATH);
-                }
-            }
-        }
-        ret = i2c_write_bytes(ts->client, GTP_REG_BAK_REF, p_bak_ref, ts->bak_ref_len);
-        if (FAIL == ret)
-        {
-            GTP_ERROR("failed to send bak_ref because of iic comm error");
-            goto bak_ref_exit;
-        }
-        break;
-        
-    case GTP_BAK_REF_STORE:
-        GTP_INFO("Store backup-reference");
-        ret = i2c_read_bytes(ts->client, GTP_REG_BAK_REF, p_bak_ref, ts->bak_ref_len);
-        if (ret < 0)
-        {
-            GTP_ERROR("failed to read bak_ref info, sending default back-reference");
-            goto bak_ref_default;
-        }
-        ref_filp->f_op->llseek(ref_filp, 0, SEEK_SET);
-        ref_filp->f_op->write(ref_filp, (char*)p_bak_ref, ts->bak_ref_len, &ref_filp->f_pos);
-        break;
-        
-    default:
-        GTP_ERROR("invalid backup-reference request");
-        break;
-    }
-    ret = SUCCESS;
-    goto bak_ref_exit;
-
-bak_ref_default:
-    
-    for (j = 0; j < ref_grps; ++j)
-    {
-        memset(&p_bak_ref[j * ref_seg_len], 0, ref_seg_len);
-        p_bak_ref[j * ref_seg_len + ref_seg_len - 1] = 0x01;  // checksum = 1     
-    }
-    ret = i2c_write_bytes(ts->client, GTP_REG_BAK_REF, p_bak_ref, ts->bak_ref_len);
-    if (!IS_ERR(ref_filp))
-    {
-        GTP_INFO("write backup-reference data into %s", GTP_BAK_REF_PATH);
-        ref_filp->f_op->llseek(ref_filp, 0, SEEK_SET);
-        ref_filp->f_op->write(ref_filp, (char*)p_bak_ref, ts->bak_ref_len, &ref_filp->f_pos);
-    }
-    if (ret == FAIL)
-    {
-        GTP_ERROR("failed to load the default backup reference");
-    }
-    
-bak_ref_exit:
-    
-    if (p_bak_ref)
-    {
-        kfree(p_bak_ref);
-    }
-    if (ref_filp && !IS_ERR(ref_filp))
-    {
-        filp_close(ref_filp, NULL);
-    }
-    return ret;
-}
-
-
-static s32 gtp_verify_main_clk(u8 *p_main_clk)
-{
-    u8 chksum = 0;
-    u8 main_clock = p_main_clk[0];
-    s32 i = 0;
-    
-    if (main_clock < 50 || main_clock > 120)    
-    {
-        return FAIL;
-    }
-    
-    for (i = 0; i < 5; ++i)
-    {
-        if (main_clock != p_main_clk[i])
-        {
-            return FAIL;
-        }
-        chksum += p_main_clk[i];
-    }
-    chksum += p_main_clk[5];
-    if ( (chksum) == 0)
-    {
-        return SUCCESS;
-    }
-    else
-    {
-        return FAIL;
-    }
-}
-
-static s32 gtp_main_clk_proc(struct goodix_ts_data *ts)
-{
-    s32 ret = 0;
-    s32 i = 0;
-    s32 clk_chksum = 0;
-    struct file *clk_filp = NULL;
-    u8 p_main_clk[6] = {0};
-
-    ret = gup_check_fs_mounted("/data");
-    if (FAIL == ret)
-    {
-        ts->clk_chk_fs_times++;
-        GTP_DEBUG("Clock check /data times/MAX_TIMES: %d / %d", ts->clk_chk_fs_times, GTP_CHK_FS_MNT_MAX);
-        if (ts->clk_chk_fs_times < GTP_CHK_FS_MNT_MAX)
-        {
-            msleep(50);
-            GTP_INFO("/data not mounted.");
-            return FAIL;
-        }
-        GTP_INFO("Check /data mount timeout!");
-    }
-    else
-    {
-        GTP_INFO("/data mounted!!!(%d/%d)", ts->clk_chk_fs_times, GTP_CHK_FS_MNT_MAX);
-    }
-    
-    clk_filp = filp_open(GTP_MAIN_CLK_PATH, O_RDWR | O_CREAT, 0666);
-    if (IS_ERR(clk_filp))
-    {
-        GTP_ERROR("%s is unavailable, calculate main clock", GTP_MAIN_CLK_PATH);
-    }
-    else
-    {
-        clk_filp->f_op->llseek(clk_filp, 0, SEEK_SET);
-        clk_filp->f_op->read(clk_filp, (char *)p_main_clk, 6, &clk_filp->f_pos);
-       
-        ret = gtp_verify_main_clk(p_main_clk);
-        if (FAIL == ret)
-        {
-            // recalculate main clock & rewrite main clock data to file
-            GTP_ERROR("main clock data in %s is wrong, recalculate main clock", GTP_MAIN_CLK_PATH);
-        }
-        else
-        { 
-            GTP_INFO("main clock data in %s used, main clock freq: %d", GTP_MAIN_CLK_PATH, p_main_clk[0]);
-            filp_close(clk_filp, NULL);
-            goto update_main_clk;
-        }
-    }
-    
-#if GTP_ESD_PROTECT
-    gtp_esd_switch(ts->client, SWITCH_OFF);
-#endif
-    ret = gup_clk_calibration();
-    gtp_esd_recovery(ts->client);
-    
-#if GTP_ESD_PROTECT
-    gtp_esd_switch(ts->client, SWITCH_ON);
-#endif
-
-    GTP_INFO("calibrate main clock: %d", ret);
-    if (ret < 50 || ret > 120)
-    {
-        GTP_ERROR("wrong main clock: %d", ret);
-        goto exit_main_clk;
-    }
-    
-    // Sum{0x8020~0x8025} = 0
-    for (i = 0; i < 5; ++i)
-    {
-        p_main_clk[i] = ret;
-        clk_chksum += p_main_clk[i];
-    }
-    p_main_clk[5] = 0 - clk_chksum;
-    
-    if (!IS_ERR(clk_filp))
-    {
-        GTP_DEBUG("write main clock data into %s", GTP_MAIN_CLK_PATH);
-        clk_filp->f_op->llseek(clk_filp, 0, SEEK_SET);
-        clk_filp->f_op->write(clk_filp, (char *)p_main_clk, 6, &clk_filp->f_pos);
-        filp_close(clk_filp, NULL);
-    }
-    
-update_main_clk:
-    ret = i2c_write_bytes(ts->client, GTP_REG_MAIN_CLK, p_main_clk, 6);
-    if (FAIL == ret)
-    {
-        GTP_ERROR("update main clock failed!");
-        return FAIL;
-    }
-    return SUCCESS;
-    
-exit_main_clk:
-    if (!IS_ERR(clk_filp))
-    {
-        filp_close(clk_filp, NULL);
-    }
-    return FAIL;
-}
-
-
-s32 gtp_gt9xxf_init(struct i2c_client *client)
-{
-    s32 ret = 0;
-    
-    ret = gup_fw_download_proc(NULL, GTP_FL_FW_BURN); 
-    if (FAIL == ret)
-    {
-        return FAIL;
-    }
-    
-    ret = gtp_fw_startup(client);
-    if (FAIL == ret)
-    {
-        return FAIL;
-    }
-    return SUCCESS;
-}
-
-void gtp_get_chip_type(struct goodix_ts_data *ts)
-{
-    u8 opr_buf[10] = {0x00};
-    s32 ret = 0;
-    
-    msleep(10);
-    
-    ret = gtp_i2c_read_dbl_check(ts->client, GTP_REG_CHIP_TYPE, opr_buf, 10);
-    
-    if (FAIL == ret)
-    {
-        GTP_ERROR("Failed to get chip-type, set chip type default: GOODIX_GT9");
-        ts->chip_type = CHIP_TYPE_GT9;
-        return;
-    }
-    
-    if (!memcmp(opr_buf, "GOODIX_GT9", 10))
-    {
-        ts->chip_type = CHIP_TYPE_GT9;
-    }
-    else // GT9XXF
-    {
-        ts->chip_type = CHIP_TYPE_GT9F;
-    }
-    GTP_INFO("Chip Type: %s", (ts->chip_type == CHIP_TYPE_GT9) ? "GOODIX_GT9" : "GOODIX_GT9F");
-}
-#endif     //For GT9XXF End//
-
 /* 
  * Devices Tree support, 
 */
@@ -2544,18 +1851,6 @@ static int goodix_ts_probe(struct i2c_client *client, const struct i2c_device_id
         kfree(ts);
         return ret;
     }
-    
-#if GTP_COMPATIBLE_MODE
-    gtp_get_chip_type(ts);  
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        ret = gtp_gt9xxf_init(ts->client);
-        if (FAIL == ret)
-        {
-            GTP_INFO("Failed to init GT9XXF.");
-        }
-    }
-#endif
 
     ret = gtp_i2c_test(client);
     if (ret < 0)
@@ -2827,13 +2122,6 @@ static void goodix_ts_resume(struct goodix_ts_data *ts)
     {
         GTP_ERROR("GTP later resume failed.");
     }
-#if (GTP_COMPATIBLE_MODE)
-    if (CHIP_TYPE_GT9F == ts->chip_type)
-    {
-        // do nothing
-    }
-    else
-#endif
     {
         gtp_send_cfg(ts->client);
     }
@@ -3145,34 +2433,6 @@ static void gtp_esd_check_func(struct work_struct *work)
     }
     if (i >= 3)
     {
-    #if GTP_COMPATIBLE_MODE
-        if (CHIP_TYPE_GT9F == ts->chip_type)
-        {        
-            if (ts->rqst_processing)
-            {
-                GTP_INFO("Request processing, no esd recovery");
-            }
-            else
-            {
-                GTP_ERROR("IC working abnormally! Process esd recovery.");
-                esd_buf[0] = 0x42;
-                esd_buf[1] = 0x26;
-                esd_buf[2] = 0x01;
-                esd_buf[3] = 0x01;
-                esd_buf[4] = 0x01;
-                gtp_i2c_write_no_rst(ts->client, esd_buf, 5);
-                msleep(50);
-		#ifdef GTP_CONFIG_OF
-				gtp_power_switch(ts->client, 0);
-				msleep(20);
-				gtp_power_switch(ts->client, 1);
-				msleep(20);
-		#endif				
-                gtp_esd_recovery(ts->client);
-            }
-        }
-        else
-    #endif
         {
             GTP_ERROR("IC working abnormally! Process reset guitar.");
             esd_buf[0] = 0x42;
