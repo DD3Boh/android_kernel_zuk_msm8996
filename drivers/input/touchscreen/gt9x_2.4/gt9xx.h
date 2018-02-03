@@ -1,22 +1,22 @@
 /* 
- * Goodix GT9xx touchscreen driver
- * 
- * Copyright  (C)  2010 - 2014 Goodix. Ltd.
- * 
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be a reference 
- * to you, when you are integrating the GOODiX's CTP IC into your system, 
- * but WITHOUT ANY WARRANTY; without even the implied warranty of 
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
- * General Public License for more details.
- * 
- * Version: 2.4
- * Release Date: 2014/11/28
- */
+* Goodix GT9xx touchscreen driver
+* 
+* Copyright  (C)  2010 - 2014 Goodix. Ltd.
+* 
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+* 
+* This program is distributed in the hope that it will be a reference 
+* to you, when you are integrating the GOODiX's CTP IC into your system, 
+* but WITHOUT ANY WARRANTY; without even the implied warranty of 
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+* General Public License for more details.
+* 
+* Version: 2.4
+* Release Date: 2014/11/28
+*/
 
 #ifndef _GOODIX_GT9XX_H_
 #define _GOODIX_GT9XX_H_
@@ -74,34 +74,34 @@
 #define TOUCH_SYS	      1	   //Added touch node for settings (gesture wake)
 
 struct goodix_ts_data {
-    spinlock_t irq_lock;
-    struct i2c_client *client;
-    struct input_dev  *input_dev;
-    struct hrtimer timer;
-    struct work_struct  work;
-    s32 irq_is_disable;
-    s32 irq_is_free;
-    s32 use_irq;
-    u16 abs_x_max;
-    u16 abs_y_max;
-    u8  max_touch_num;
-    u8  int_trigger_type;
-    u8  green_wake_mode;
-    u8  enter_update;
-    u8  gtp_is_suspend;
-    u8  gtp_rawdiff_mode;
-    int  gtp_cfg_len;
-    u8  fw_error;
-    u8  pnl_init_error;
+	spinlock_t irq_lock;
+	struct i2c_client *client;
+	struct input_dev  *input_dev;
+	struct hrtimer timer;
+	struct work_struct  work;
+	s32 irq_is_disable;
+	s32 irq_is_free;
+	s32 use_irq;
+	u16 abs_x_max;
+	u16 abs_y_max;
+	u8  max_touch_num;
+	u8  int_trigger_type;
+	u8  green_wake_mode;
+	u8  enter_update;
+	u8  gtp_is_suspend;
+	u8  gtp_rawdiff_mode;
+	int  gtp_cfg_len;
+	u8  fw_error;
+	u8  pnl_init_error;
 #if TOUCH_SYS
-        struct class *tp_class;
-        int index;
-        struct device *dev;
+		struct class *tp_class;
+		int index;
+		struct device *dev;
 #endif
-        struct pinctrl *ts_pinctrl;
-        struct pinctrl_state *pinctrl_state_active;
-        struct pinctrl_state *pinctrl_state_suspend;
-        struct pinctrl_state *pinctrl_state_release;
+		struct pinctrl *ts_pinctrl;
+		struct pinctrl_state *pinctrl_state_active;
+		struct pinctrl_state *pinctrl_state_suspend;
+		struct pinctrl_state *pinctrl_state_release;
 #if   defined(CONFIG_FB)
 	struct notifier_block notifier;
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -109,15 +109,15 @@ struct goodix_ts_data {
 #endif
 
 #if GTP_WITH_PEN
-    struct input_dev *pen_dev;
+	struct input_dev *pen_dev;
 #endif
 
 #if GTP_ESD_PROTECT
-    spinlock_t esd_lock;
-    u8  esd_running;
-    s32 clk_tick_cnt;
+	spinlock_t esd_lock;
+	u8  esd_running;
+	s32 clk_tick_cnt;
 #endif
-    
+	
 };
 
 extern u16 show_len;
@@ -129,12 +129,12 @@ extern int gtp_int_gpio;
 // STEP_1(REQUIRED): Define Configuration Information Group(s)
 // Sensor_ID Map:
 /* sensor_opt1 sensor_opt2 Sensor_ID
-    GND         GND          0 
-    VDDIO      GND          1 
-    NC           GND          2 
-    GND         NC/300K    3 
-    VDDIO      NC/300K    4 
-    NC           NC/300K    5 
+	GND         GND          0 
+	VDDIO      GND          1 
+	NC           GND          2 
+	GND         NC/300K    3 
+	VDDIO      NC/300K    4 
+	NC           NC/300K    5 
 */
 // TODO: define your own default or for Sensor_ID == 0 config here. 
 // The predefined one is just a sample config, which is not suitable for your tp in most cases.
@@ -156,11 +156,11 @@ extern int gtp_int_gpio;
 	0x18,0x16,0x14,0x13,0x12,0x10,0x0F,0x0C,0x0A,0x08,0x06,\
 	0x04,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x9C,0x01\
-    }
-    
+	}
+	
 // TODO: define your config for Sensor_ID == 1 here, if needed
 #define CTP_CFG_GROUP1 {\
-    }
+	}
 
 // TODO: define your config for Sensor_ID == 2 here, if needed
 #define CTP_CFG_GROUP2 {\
@@ -181,29 +181,29 @@ extern int gtp_int_gpio;
 	0x18,0x16,0x14,0x13,0x12,0x10,0x0F,0x0C,0x0A,0x08,0x06,\
 	0x04,0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,\
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3C,0x01\
-    }
+	}
 
 // TODO: define your config for Sensor_ID == 3 here, if needed
 #define CTP_CFG_GROUP3 {\
 }
 // TODO: define your config for Sensor_ID == 4 here, if needed
 #define CTP_CFG_GROUP4 {\
-    }
+	}
 
 // TODO: define your config for Sensor_ID == 5 here, if needed
 #define CTP_CFG_GROUP5 {\
-    }
+	}
 
 // STEP_2(REQUIRED): Customize your I/O ports & I/O operations
 #define GTP_RST_PORT    16//S5PV210_GPJ3(6)
 #define GTP_INT_PORT    17//S5PV210_GPH1(3)
 
 #define GTP_GPIO_AS_INPUT(pin)          do{\
-                                            gpio_direction_input(pin);\
-                                        }while(0)
+											gpio_direction_input(pin);\
+										}while(0)
 #define GTP_GPIO_AS_INT(pin)            do{\
-                                            GTP_GPIO_AS_INPUT(pin);\
-                                        }while(0)
+											GTP_GPIO_AS_INPUT(pin);\
+										}while(0)
 #define GTP_GPIO_GET_VALUE(pin)         gpio_get_value(pin)
 #define GTP_GPIO_OUTPUT(pin,level)      gpio_direction_output(pin,level)
 #define GTP_GPIO_REQUEST(pin, label)    gpio_request(pin, label)
@@ -212,19 +212,19 @@ extern int gtp_int_gpio;
 
 // STEP_3(optional): Specify your special config info if needed
 #if GTP_CUSTOM_CFG
-  #define GTP_MAX_HEIGHT   800
-  #define GTP_MAX_WIDTH    480
-  #define GTP_INT_TRIGGER  0            // 0: Rising 1: Falling
+#define GTP_MAX_HEIGHT   800
+#define GTP_MAX_WIDTH    480
+#define GTP_INT_TRIGGER  0            // 0: Rising 1: Falling
 #else
-  #define GTP_MAX_HEIGHT   4096
-  #define GTP_MAX_WIDTH    4096
-  #define GTP_INT_TRIGGER  1
+#define GTP_MAX_HEIGHT   4096
+#define GTP_MAX_WIDTH    4096
+#define GTP_INT_TRIGGER  1
 #endif
 #define GTP_MAX_TOUCH         5
 
 // STEP_4(optional): If keys are available and reported as keys, config your key info here                             
 #if GTP_HAVE_TOUCH_KEY
-    #define GTP_KEY_TAB  {KEY_MENU, KEY_HOME, KEY_BACK}
+	#define GTP_KEY_TAB  {KEY_MENU, KEY_HOME, KEY_BACK}
 #endif
 
 //***************************PART3:OTHER define*********************************
@@ -285,35 +285,35 @@ extern int gtp_int_gpio;
 #define GTP_INFO(fmt,arg...)           printk("<<-GTP-INFO->> "fmt"\n",##arg)
 #define GTP_ERROR(fmt,arg...)          printk("<<-GTP-ERROR->> "fmt"\n",##arg)
 #define GTP_DEBUG(fmt,arg...)          do{\
-                                         if(GTP_DEBUG_ON)\
-                                         printk("<<-GTP-DEBUG->> [%d]"fmt"\n",__LINE__, ##arg);\
-                                       }while(0)
+										if(GTP_DEBUG_ON)\
+										printk("<<-GTP-DEBUG->> [%d]"fmt"\n",__LINE__, ##arg);\
+									}while(0)
 #define GTP_DEBUG_ARRAY(array, num)    do{\
-                                         s32 i;\
-                                         u8* a = array;\
-                                         if(GTP_DEBUG_ARRAY_ON)\
-                                         {\
-                                            printk("<<-GTP-DEBUG-ARRAY->>\n");\
-                                            for (i = 0; i < (num); i++)\
-                                            {\
-                                                printk("%02x   ", (a)[i]);\
-                                                if ((i + 1 ) %10 == 0)\
-                                                {\
-                                                    printk("\n");\
-                                                }\
-                                            }\
-                                            printk("\n");\
-                                        }\
-                                       }while(0)
+										s32 i;\
+										u8* a = array;\
+										if(GTP_DEBUG_ARRAY_ON)\
+										{\
+											printk("<<-GTP-DEBUG-ARRAY->>\n");\
+											for (i = 0; i < (num); i++)\
+											{\
+												printk("%02x   ", (a)[i]);\
+												if ((i + 1 ) %10 == 0)\
+												{\
+													printk("\n");\
+												}\
+											}\
+											printk("\n");\
+										}\
+									}while(0)
 #define GTP_DEBUG_FUNC()               do{\
-                                         if(GTP_DEBUG_FUNC_ON)\
-                                         printk("<<-GTP-FUNC->> Func:%s@Line:%d\n",__func__,__LINE__);\
-                                       }while(0)
+										if(GTP_DEBUG_FUNC_ON)\
+										printk("<<-GTP-FUNC->> Func:%s@Line:%d\n",__func__,__LINE__);\
+									}while(0)
 #define GTP_SWAP(x, y)                 do{\
-                                         typeof(x) z = x;\
-                                         x = y;\
-                                         y = z;\
-                                       }while (0)
+										typeof(x) z = x;\
+										x = y;\
+										y = z;\
+									}while (0)
 
 //*****************************End of Part III********************************
 #ifdef CONFIG_OF
