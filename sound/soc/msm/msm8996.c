@@ -351,7 +351,9 @@ static int msm_hdmi_rx_ch = 2;
 static int msm_proxy_rx_ch = 2;
 static int hdmi_rx_sample_rate = SAMPLING_RATE_48KHZ;
 static int msm_tert_mi2s_tx_ch = 2;
+#ifdef QUAT_MI2S_ENABLE
 static int msm_quat_mi2s_ch = 2;
+#endif
 
 static bool codec_reg_done;
 
@@ -4433,7 +4435,7 @@ static struct snd_soc_ops msm8996_quat_mi2s_be_ops = {
 	.startup = msm8996_quat_mi2s_startup,
 	.shutdown = msm8996_quat_mi2s_shutdown
 };
-#endif
+
 static int msm_be_quat_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 									   struct snd_pcm_hw_params *params)
 {
@@ -4448,6 +4450,7 @@ static int msm_be_quat_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 				   SNDRV_PCM_FORMAT_S16_LE);
 	return 0;
 }
+#endif
 
 static int msm_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 				  struct snd_pcm_hw_params *params)
