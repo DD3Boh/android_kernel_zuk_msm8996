@@ -1,21 +1,21 @@
 /* drivers/input/touchscreen/goodix_tool.c
- *
- * 2010 - 2014 Goodix Technology.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be a reference 
- * to you, when you are integrating the GOODiX's CTP IC into your system,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
- * 
- * Version: 1.4   
- * Release Date:  2015/07/10
- */
+*
+* 2010 - 2014 Goodix Technology.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be a reference 
+* to you, when you are integrating the GOODiX's CTP IC into your system,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+* General Public License for more details.
+* 
+* Version: 1.4   
+* Release Date:  2015/07/10
+*/
 
 #include <linux/delay.h>
 #include <asm/uaccess.h>
@@ -63,9 +63,9 @@ static struct proc_dir_entry *gt1x_tool_proc_entry;
 static struct file_operations gt1x_tool_fops = {
 	.read = gt1x_tool_read,
 	.write = gt1x_tool_write,
-  .open = gt1x_tool_open,
-  .release = gt1x_tool_release,
-  .owner = THIS_MODULE,
+.open = gt1x_tool_open,
+.release = gt1x_tool_release,
+.owner = THIS_MODULE,
 };
 
 static void set_tool_node_name(char *procname)
@@ -166,11 +166,11 @@ static u8 relation(u8 src, u8 dst, u8 rlt)
 
 /*******************************************************
 Function:
-    Comfirm function.
+	Comfirm function.
 Input:
-  None.
+None.
 Output:
-    Return write length.
+	Return write length.
 ********************************************************/
 static u8 comfirm(void)
 {
@@ -204,11 +204,11 @@ static u8 comfirm(void)
 
 /*******************************************************
 Function:
-    Goodix tool write function.
+	Goodix tool write function.
 Input:
-  standard proc write function param.
+standard proc write function param.
 Output:
-    Return write length.
+	Return write length.
 ********************************************************/
 static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size_t len, loff_t * data)
 {
@@ -223,20 +223,20 @@ static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size
 
 	GTP_DEBUG("wr  :0x%02x.", cmd_head.wr);
 	/*
-	   GTP_DEBUG("flag:0x%02x.", cmd_head.flag);
-	   GTP_DEBUG("flag addr:0x%02x%02x.", cmd_head.flag_addr[0], cmd_head.flag_addr[1]);
-	   GTP_DEBUG("flag val:0x%02x.", cmd_head.flag_val);
-	   GTP_DEBUG("flag rel:0x%02x.", cmd_head.flag_relation);
-	   GTP_DEBUG("circle  :%d.", (s32)cmd_head.circle);
-	   GTP_DEBUG("times   :%d.", (s32)cmd_head.times);
-	   GTP_DEBUG("retry   :%d.", (s32)cmd_head.retry);
-	   GTP_DEBUG("delay   :%d.", (s32)cmd_head.delay);
-	   GTP_DEBUG("data len:%d.", (s32)cmd_head.data_len);
-	   GTP_DEBUG("addr len:%d.", (s32)cmd_head.addr_len);
-	   GTP_DEBUG("addr:0x%02x%02x.", cmd_head.addr[0], cmd_head.addr[1]);
-	   GTP_DEBUG("len:%d.", (s32)len);
-	   GTP_DEBUG("buf[20]:0x%02x.", buff[CMD_HEAD_LENGTH]);
-	 */
+	GTP_DEBUG("flag:0x%02x.", cmd_head.flag);
+	GTP_DEBUG("flag addr:0x%02x%02x.", cmd_head.flag_addr[0], cmd_head.flag_addr[1]);
+	GTP_DEBUG("flag val:0x%02x.", cmd_head.flag_val);
+	GTP_DEBUG("flag rel:0x%02x.", cmd_head.flag_relation);
+	GTP_DEBUG("circle  :%d.", (s32)cmd_head.circle);
+	GTP_DEBUG("times   :%d.", (s32)cmd_head.times);
+	GTP_DEBUG("retry   :%d.", (s32)cmd_head.retry);
+	GTP_DEBUG("delay   :%d.", (s32)cmd_head.delay);
+	GTP_DEBUG("data len:%d.", (s32)cmd_head.data_len);
+	GTP_DEBUG("addr len:%d.", (s32)cmd_head.addr_len);
+	GTP_DEBUG("addr:0x%02x%02x.", cmd_head.addr[0], cmd_head.addr[1]);
+	GTP_DEBUG("len:%d.", (s32)len);
+	GTP_DEBUG("buf[20]:0x%02x.", buff[CMD_HEAD_LENGTH]);
+	*/
 
 	if (1 == cmd_head.wr) {
 		u16 addr, data_len, pos;
@@ -320,14 +320,14 @@ static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size
 	} else if (13 == cmd_head.wr) {
 		gt1x_leave_update_mode();
 	} else if (15 == cmd_head.wr) {
-	    struct task_struct *thrd = NULL;
+		struct task_struct *thrd = NULL;
 		memset(cmd_head.data, 0, cmd_head.data_len + 1);
 		memcpy(cmd_head.data, &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 		GTP_DEBUG("update firmware, filename: %s", cmd_head.data);
-        thrd = kthread_run(gt1x_update_firmware, (void *)cmd_head.data, "GT1x FW Update");
-        if (IS_ERR(thrd)) {
-            return PTR_ERR(thrd);
-        }
+		thrd = kthread_run(gt1x_update_firmware, (void *)cmd_head.data, "GT1x FW Update");
+		if (IS_ERR(thrd)) {
+			return PTR_ERR(thrd);
+		}
 	}
 	return CMD_HEAD_LENGTH;
 }
@@ -335,27 +335,27 @@ static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size
 static u8 devicecount = 0;
 static int gt1x_tool_open(struct inode *inode,struct file *file)
 {
-        if (devicecount > 0) {
-            return -ERESTARTSYS;
-            GTP_ERROR("tools open failed!");
-        }
-        
-        devicecount++;
-        return 0;
+		if (devicecount > 0) {
+			return -ERESTARTSYS;
+			GTP_ERROR("tools open failed!");
+		}
+		
+		devicecount++;
+		return 0;
 }
 
 static int gt1x_tool_release(struct inode *inode, struct file *filp)
 {
-        devicecount--;
-        return 0;
+		devicecount--;
+		return 0;
 }
 /*******************************************************
 Function:
-    Goodix tool read function.
+	Goodix tool read function.
 Input:
-  standard proc read function param.
+standard proc read function param.
 Output:
-    Return read length.
+	Return read length.
 ********************************************************/
 static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t count, loff_t * ppos)
 {
@@ -370,7 +370,7 @@ static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t co
 		GTP_ERROR("[READ] invaild operator fail!");
 		return -1;
 	} else if (!cmd_head.wr) {
-	    /* general  i2c read  */
+		/* general  i2c read  */
 		u16 addr, data_len, len, loc;
 
 		if (1 == cmd_head.flag) {
@@ -407,13 +407,13 @@ static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t co
 			loc += len;
 			GTP_DEBUG_ARRAY(&cmd_head.data[GTP_ADDR_LENGTH], len);
 		}
-		 *ppos += cmd_head.data_len;
+		*ppos += cmd_head.data_len;
 		return cmd_head.data_len;
 	} else if (2 == cmd_head.wr) {
 		GTP_DEBUG("Return ic type:%s len:%d.", buffer, (s32) cmd_head.data_len);
 		return -1;
 	} else if (4 == cmd_head.wr) {
-	    /* read fw update progress */
+		/* read fw update progress */
 		buffer[0] = update_info.progress >> 8;
 		buffer[1] = update_info.progress & 0xff;
 		buffer[2] = update_info.max_progress >> 8;
@@ -424,7 +424,7 @@ static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t co
 		//Read error code!
 		return -1;
 	} else if (8 == cmd_head.wr) {	
-	    /* Read driver version */
+		/* Read driver version */
 		s32 tmp_len;
 		tmp_len = strlen(GTP_DRIVER_VERSION);
 		memcpy(buffer, GTP_DRIVER_VERSION, tmp_len);
