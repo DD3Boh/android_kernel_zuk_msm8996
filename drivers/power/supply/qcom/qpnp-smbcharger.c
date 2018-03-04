@@ -5650,6 +5650,7 @@ static int smbchg_usb_get_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		val->intval = chip->usb_current_max;
 		break;
@@ -5678,6 +5679,7 @@ static int smbchg_usb_set_property(struct power_supply *psy,
 	struct smbchg_chip *chip = power_supply_get_drvdata(psy);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		chip->usb_current_max = val->intval;
 		break;
@@ -5696,6 +5698,7 @@ static int
 smbchg_usb_is_writeable(struct power_supply *psy, enum power_supply_property psp)
 {
 	switch (psp) {
+	case POWER_SUPPLY_PROP_SDP_CURRENT_MAX:
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
 		return 1;
 	default:
@@ -5714,6 +5717,7 @@ static char *smbchg_usb_supplicants[] = {
 static enum power_supply_property smbchg_usb_properties[] = {
 	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_SDP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_CURRENT_MAX,
 	POWER_SUPPLY_PROP_TYPE,
 	POWER_SUPPLY_PROP_HEALTH,
