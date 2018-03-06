@@ -53,8 +53,8 @@ struct fpc1020_data {
 	u8  report_key;
 	struct wake_lock wake_lock;
 	struct wake_lock fp_wl;
-	int wakeup_status;
-	int screen_on;
+	int __read_mostly wakeup_status;
+	int __read_mostly screen_on;
 };
 
 /* From drivers/input/keyboard/gpio_keys.c */
