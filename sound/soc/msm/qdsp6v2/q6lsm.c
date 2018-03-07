@@ -56,7 +56,6 @@ enum {
 };
 
 enum {
-	LSM_INVALID_SESSION_ID = 0,
 	LSM_MIN_SESSION_ID = 1,
 	LSM_MAX_SESSION_ID = 8,
 	LSM_CONTROL_SESSION = 0x0F,
@@ -228,7 +227,7 @@ static void q6lsm_session_free(struct lsm_client *client)
 	spin_lock_irqsave(&lsm_session_lock, flags);
 	lsm_session[client->session] = NULL;
 	spin_unlock_irqrestore(&lsm_session_lock, flags);
-	client->session = LSM_INVALID_SESSION_ID;
+	client->session = 0;
 }
 
 static void *q6lsm_mmap_apr_reg(void)
