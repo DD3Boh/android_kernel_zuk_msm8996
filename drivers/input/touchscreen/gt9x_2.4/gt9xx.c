@@ -168,18 +168,9 @@ s32 gtp_i2c_write(struct i2c_client *client,u8 *buf,s32 len)
 		.buf = buf,
 	};
 
-	for (retries = 0; retries < 5; retries++) {
-		ret = i2c_transfer(client->adapter, &msg, 1);
-		if (ret == 1)
-			break;
-		dev_err(&client->dev, "I2C retry: %d\n", retries + 1);
-	}
-	if (retries == 5) {
-		GTP_ERROR("I2C Write: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
-		{
-			gtp_reset_guitar(client, 10);  
-		}
-	}
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret != 1)
+		return -EINVAL;
 	return ret;
 }
 
