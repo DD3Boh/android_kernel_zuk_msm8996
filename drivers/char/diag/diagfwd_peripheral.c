@@ -450,7 +450,7 @@ static void diagfwd_data_read_untag_done(struct diagfwd_info *fwd_info,
 					PERIPHERAL_LPASS)
 					temp_buf_upd_2 =
 					fwd_info->buf_upd_2_a->data_raw;
-				}
+			}
 		} else if (fwd_info->buf_2 &&
 					fwd_info->buf_2->data_raw == buf) {
 			flag_buf_2 = 1;
