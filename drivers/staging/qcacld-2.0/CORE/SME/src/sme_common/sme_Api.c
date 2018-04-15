@@ -9841,7 +9841,7 @@ eHalStatus sme_SetMaxTxPowerPerBand(eCsrBand band, v_S7_t dB,
 		  band, dB);
 
 	MTRACE(vos_trace(VOS_MODULE_ID_SME,
-			TRACE_CODE_SME_TX_WDA_MSG, NO_SESSION, msg.type));
+			TRACE_CODE_SME_TX_WDA_MSG, NO_SESSION, msg.type=0));
 
 	status = sme_AcquireGlobalLock(&mac_ctx->sme);
 	if (HAL_STATUS_SUCCESS(status)) {
