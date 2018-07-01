@@ -116,7 +116,7 @@
 };
 
 &pmi8994_haptics {
-	qcom,actuator-type = "erm";
+	qcom,actuator-type = <1>;
 	qcom,vmax-mv = <3200>;
 	qcom,wave-shape = "square";
 	//qcom,wave-play-rate-us = <5263>;//0~20475
