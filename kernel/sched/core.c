@@ -8246,12 +8246,14 @@ static struct rq *move_queued_task(struct task_struct *p, int new_cpu)
 static const struct cpumask *get_adjusted_cpumask(const struct task_struct *p,
 	const struct cpumask *req_mask)
 {
+	bool dex2oat = !memcmp(p->comm, "dex", sizeof("dex"));
+
 	/* Force all performance-critical kthreads onto the big cluster */
 	if (p->flags & PF_PERF_CRITICAL)
 		return cpu_perf_mask;
 
 	/* Force all trivial, unbound kthreads onto the little cluster */
-	if (p->flags & PF_KTHREAD && p->pid != 1 &&
+	if (p->flags & PF_KTHREAD && p->pid != 1 && !dex2oat &&
 		cpumask_equal(req_mask, cpu_all_mask))
 		return cpu_lp_mask;
 
