@@ -8250,7 +8250,8 @@ static void get_adjusted_cpumask(const struct task_struct *p,
 	bool dex2oat = !memcmp(p->comm, "dex", sizeof("dex"));
 
 	/* Force all unbound kthreads onto the little cluster */
-	if (p->flags & PF_KTHREAD && !dex2oat && cpumask_weight(old_mask) > 1)
+	if (p->flags & PF_KTHREAD && !dex2oat && p->pid != 1 && cpumask_weight(old_mask) > 1)
+
 		cpumask_copy(new_mask, to_cpumask(&little_cluster_cpus));
 	else
 		cpumask_copy(new_mask, old_mask);
