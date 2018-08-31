@@ -359,3 +359,16 @@
 &i2c_8 {
 	/delete-node/ nq@28;
 };
+
+&firmware {
+	android {
+		fstab {
+			vendor {
+				fsmgr_flags = "wait";
+			};
+			system {
+				fsmgr_flags = "wait";
+			};
+		};
+	};
+};
