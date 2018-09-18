@@ -119,3 +119,13 @@
 	qcom,ilim-ma = <105>;
 	qcom,int-pwm-freq-khz = <253>;//lowest:253Khz
 };
+
+&firmware {
+	android {
+		fstab {
+			system {
+				dev = "/dev/block/platform/soc/7464900.sdhci/by-name/system";
+			};
+		};
+	};
+};
