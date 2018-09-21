@@ -33,68 +33,66 @@
 };
 
 &tlmm {
-	tlmm_gpio_key {
-		cclogic_defaulthigh_active: cclogic_defaulthigh_active {
-			mux {
-				pins = "gpio1", "gpio11";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio1", "gpio11";
-				drive-strength = <0x6>;
-				bias-pull-up;
-			};
+	cclogic_defaulthigh_active: cclogic_defaulthigh_active {
+		mux {
+			pins = "gpio1", "gpio11";
+			function = "gpio";
 		};
-		cclogic_defaulthigh_suspend: cclogic_defaulthigh_suspend {
-			mux {
-				pins = "gpio1", "gpio11";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio1", "gpio11";
-				drive-strength = <0x2>;
-				bias-pull-up;
-			};
+		config {
+			pins = "gpio1", "gpio11";
+			drive-strength = <0x6>;
+			bias-pull-up;
 		};
-		cclogic_defaultnone_active: cclogic_defaultnone_active {
-			mux {
-				function = "gpio";
-			};
-			config {
-				drive-strength = <6>;
-				bias-disable;
-			};
+	};
+	cclogic_defaulthigh_suspend: cclogic_defaulthigh_suspend {
+		mux {
+			pins = "gpio1", "gpio11";
+			function = "gpio";
 		};
-		cclogic_defaultnone_suspend: cclogic_defaultnone_suspend {
-			mux {
-				function = "gpio";
-			};
-			config {
-				drive-strength = <0x2>;
-				bias-disable;
-			};
+		config {
+			pins = "gpio1", "gpio11";
+			drive-strength = <0x2>;
+			bias-pull-up;
 		};
-		cclogic_hold_active: cclogic_hold_active {
-			mux {
-				pins = "gpio12";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio12";
-				drive-strength = <0x2>;
-				bias-disable;
-			};
+	};
+	cclogic_defaultnone_active: cclogic_defaultnone_active {
+		mux {
+			function = "gpio";
 		};
-		cclogic_hold_suspend: cclogc_hold_suspend {
-			mux {
-				pins = "gpio12";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio12";
-				drive-strength = <0x2>;
-				bias-bus-hold;
-			};
+		config {
+			drive-strength = <6>;
+			bias-disable;
+		};
+	};
+	cclogic_defaultnone_suspend: cclogic_defaultnone_suspend {
+		mux {
+			function = "gpio";
+		};
+		config {
+			drive-strength = <0x2>;
+			bias-disable;
+		};
+	};
+	cclogic_hold_active: cclogic_hold_active {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <0x2>;
+			bias-disable;
+		};
+	};
+	cclogic_hold_suspend: cclogc_hold_suspend {
+		mux {
+			pins = "gpio12";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio12";
+			drive-strength = <0x2>;
+			bias-bus-hold;
 		};
 	};
 };
