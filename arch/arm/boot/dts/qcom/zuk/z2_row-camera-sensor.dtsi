@@ -20,7 +20,7 @@
 		qcom,eeprom-src = <&eeprom0>;
 		cam_vdig-supply = <&pm8994_s3>;
 		cam_vio-supply = <&pm8994_lvs1>;
-        	cam_vana-supply = <&pm8994_l29>;
+		cam_vana-supply = <&pm8994_l29>;
 		qcom,vdd-cx-supply = <&pm8994_s1_corner>;
 		qcom,vdd-cx-name = "qcom,vdd-cx";
 		qcom,cam-vreg-name = "cam_vdig", "cam_vio", "cam_vana";
