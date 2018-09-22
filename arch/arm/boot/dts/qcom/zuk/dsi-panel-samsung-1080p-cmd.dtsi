@@ -1,5 +1,5 @@
 /* Copyright (c) 2015, The Linux Foundation. All rights reserved.
- *
+ * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -78,7 +78,7 @@
 		qcom,mdss-pan-physical-width-dimension = <65>;
 		qcom,mdss-pan-physical-height-dimension = <115>;
 		qcom,mdss-dsi-panel-orientation = "180";
-        qcom,mdss-dsi-panel-timings-phy-v2 = [22 1e 07 08 04 03 04 a0
+		qcom,mdss-dsi-panel-timings-phy-v2 = [22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0
 		22 1e 07 08 04 03 04 a0

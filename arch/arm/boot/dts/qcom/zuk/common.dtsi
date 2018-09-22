@@ -39,7 +39,7 @@
 		qcom,clk-freq-in  = <19200000>;
 		clock-names = "iface_clk", "core_clk";
 		clocks = <&clock_gcc clk_gcc_blsp1_ahb_clk>,
-			 <&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
+			<&clock_gcc clk_gcc_blsp1_qup1_i2c_apps_clk>;
 		pinctrl-names = "i2c_active", "i2c_sleep";
 		pinctrl-0 = <&i2c_1_active>;
 		pinctrl-1 = <&i2c_1_sleep>;
@@ -291,7 +291,7 @@
 
 &pm8994_gpios {
 	/delete-node/ gpio@cd00;
-    
+	
 	gpio@d500 { /* GPIO 22 - lcd_bklt_reg_en */
 		qcom,mode = <1>;	/* DIGITAL OUT */
 		qcom,output-type = <0>;		/* CMOS logic */
@@ -309,7 +309,7 @@
 		reg = <0xa000 0x100>;
 		qcom,pin-num = <1>;
 		qcom,invert = <0>;
-        qcom,vin-sel = <0>;
+		qcom,vin-sel = <0>;
 	};
 };
 
