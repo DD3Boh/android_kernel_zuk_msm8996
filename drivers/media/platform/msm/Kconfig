@@ -44,21 +44,9 @@ config MSMB_CAMERA_DEBUG
 	---help---
 	  Enable printk() debug for msm camera 2.0
 
-menuconfig ZUK_CAMERA
-	bool "Qualcomm MSM camera and video capture 2.0 support"
-	depends on ARCH_MSM && VIDEO_V4L2 && I2C
-	---help---
-	  Say Y here to enable selecting the video adapters for
-	  Qualcomm msm camera and video capture 2.0, enabling this
-	  adds support for the camera driver stack including sensor, isp
-	  and postprocessing drivers.
-
 if MSMB_CAMERA
 source "drivers/media/platform/msm/camera_v2/Kconfig"
 endif # MSMB_CAMERA
-if ZUK_CAMERA
-source "drivers/media/platform/msm/camera_v2z/Kconfig"
-endif # ZUK_CAMERA
 
 source "drivers/media/platform/msm/ais/Kconfig"
 source "drivers/media/platform/msm/dvb/Kconfig"
