@@ -4,7 +4,6 @@
 
 &cci {
 	/delete-node/ qcom,actuator@1;
-	/delete-node/ qcom,ois@0;
 	/delete-node/ qcom,eeprom@0;
 	/delete-node/ qcom,camera@0;
 	
@@ -75,4 +74,8 @@
 				<&clock_mmss clk_camss_mclk0_clk>;
 		clock-names = "cam_src_clk", "cam_clk";
 	};
+};
+
+&ois0 {
+	cam_vaf-supply = <&pm8994_l21>;
 };
