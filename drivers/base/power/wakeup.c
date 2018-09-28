@@ -49,11 +49,6 @@ static int fb_notifier_callback(struct notifier_block *self,
 	return NOTIFY_OK;
 }
 
-static bool enable_qcom_rx_wakelock_ws = true;
-module_param(enable_qcom_rx_wakelock_ws, bool, 0644);
-static bool enable_ipa_ws = true;
-module_param(enable_ipa_ws, bool, 0644);
-
 /*
  * If set, the suspend/hibernate code will abort transitions to a sleep state
  * if wakeup events are registered during or immediately before the transition.
@@ -490,9 +485,8 @@ static bool wakeup_source_blocker(struct wakeup_source *ws)
 	if (ws) {
 		wslen = strlen(ws->name);
 
-			if ((!enable_ipa_ws && !strncmp(ws->name, "IPA_WS", wslen)) ||
-			(!enable_qcom_rx_wakelock_ws &&
-				!strncmp(ws->name, "qcom_rx_wakelock", wslen))) {
+			if ((!strncmp(ws->name, "IPA_WS", wslen)) ||
+			(!strncmp(ws->name, "qcom_rx_wakelock", wslen))) {
 				if (ws->active) {
 					wakeup_source_deactivate(ws);
 					pr_info("forcefully deactivate wakeup source: %s\n",
