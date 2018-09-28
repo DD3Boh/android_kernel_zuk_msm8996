@@ -8,10 +8,7 @@
 };
 
 &cci {
-	/delete-node/ qcom,actuator@1;
 	/delete-node/ qcom,ois@0;
-	/delete-node/ qcom,eeprom@0;
-	/delete-node/ qcom,camera@0;
 	
 	qcom,camera@0 {
 		cell-index = <0>;
