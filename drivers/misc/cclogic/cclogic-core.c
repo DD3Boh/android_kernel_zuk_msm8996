@@ -346,7 +346,8 @@ static irqreturn_t cclogic_irq(int irq, void *data)
 		wake_lock(&cclogic_dev->wakelock);
 	}
 	cancel_delayed_work(&cclogic_dev->work);
-	schedule_delayed_work(&cclogic_dev->work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&cclogic_dev->work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -371,7 +372,8 @@ static irqreturn_t cclogic_plug_irq(int irq, void *data)
 
 	m_plug_state = 1;
 
-	schedule_delayed_work(&cclogic_dev->plug_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&cclogic_dev->plug_work, 0);
 
 	return IRQ_HANDLED;
 }
@@ -996,7 +998,8 @@ work_end:
 	if(ret || !gpio_get_value(cclogic_priv->platform_data->irq_working)){
 		retries++;
 		if(retries <= CCLOGIC_MAX_RETRIES){
-			schedule_delayed_work(&pdata->work, msecs_to_jiffies(100));
+			queue_delayed_work(system_power_efficient_wq,
+				&pdata->work, msecs_to_jiffies(100));
 			return;
 		}else
 			pr_err("[%s][%d] still in error,more than %d retries\n", __func__, __LINE__,CCLOGIC_MAX_RETRIES);
@@ -1024,7 +1027,8 @@ static void cclogic_do_plug_work(struct work_struct *w)
 		if(gpio_get_value(pdata->platform_data->irq_plug)){
 			if(retries<10){
 				retries++;
-				schedule_delayed_work(&pdata->plug_work, msecs_to_jiffies(100));
+				queue_delayed_work(system_power_efficient_wq,
+					&pdata->plug_work, msecs_to_jiffies(100));
 			}else{
 				m_plug_state = 0;
 				cancel_delayed_work(&cclogic_priv->work);
@@ -1347,7 +1351,8 @@ int cclogic_register(struct cclogic_chip *c)
 	cclogic_irq_enable(cclogic_priv,true);
 
 	m_plug_state = 1;
-	schedule_delayed_work(&cclogic_priv->plug_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&cclogic_priv->plug_work, 0);
 
 	return 0;
 
