@@ -21,15 +21,6 @@
 
 #include "internals.h"
 
-struct irq_desc_list {
-	struct list_head list;
-	struct irq_desc *desc;
-} perf_crit_irqs = {
-	.list = LIST_HEAD_INIT(perf_crit_irqs.list)
-};
-
-static DEFINE_RAW_SPINLOCK(perf_irqs_lock);
-
 #ifdef CONFIG_IRQ_FORCED_THREADING
 __read_mostly bool force_irqthreads;
 
@@ -118,14 +109,6 @@ EXPORT_SYMBOL(synchronize_irq);
 #ifdef CONFIG_SMP
 cpumask_var_t irq_default_affinity;
 
-static bool __irq_can_set_affinity(struct irq_desc *desc)
-{
-	if (!desc || !irqd_can_balance(&desc->irq_data) ||
-	    !desc->irq_data.chip || !desc->irq_data.chip->irq_set_affinity)
-		return false;
-	return true;
-}
-
 /**
  *	irq_can_set_affinity - Check if the affinity of a given irq can be set
  *	@irq:		Interrupt to check
@@ -133,22 +116,13 @@ static bool __irq_can_set_affinity(struct irq_desc *desc)
  */
 int irq_can_set_affinity(unsigned int irq)
 {
-	return __irq_can_set_affinity(irq_to_desc(irq));
-}
-
-/**
- * irq_can_set_affinity_usr - Check if affinity of a irq can be set from user space
- * @irq:	Interrupt to check
- *
- * Like irq_can_set_affinity() above, but additionally checks for the
- * AFFINITY_MANAGED flag.
- */
-bool irq_can_set_affinity_usr(unsigned int irq)
-{
 	struct irq_desc *desc = irq_to_desc(irq);
 
-	return __irq_can_set_affinity(desc) &&
-		!irqd_affinity_is_managed(&desc->irq_data);
+	if (!desc || !irqd_can_balance(&desc->irq_data) ||
+	    !desc->irq_data.chip || !desc->irq_data.chip->irq_set_affinity)
+		return 0;
+
+	return 1;
 }
 
 /**
@@ -358,7 +332,7 @@ setup_affinity(unsigned int irq, struct irq_desc *desc, struct cpumask *mask)
 	int node = desc->irq_data.node;
 
 	/* Excludes PER_CPU and NO_BALANCE interrupts */
-	if (!__irq_can_set_affinity(desc))
+	if (!irq_can_set_affinity(irq))
 		return 0;
 
 	/*
@@ -720,12 +694,6 @@ static irqreturn_t irq_nested_primary_handler(int irq, void *dev_id)
 	return IRQ_NONE;
 }
 
-static irqreturn_t irq_forced_secondary_handler(int irq, void *dev_id)
-{
-	WARN(1, "Secondary action handler called for irq %d\n", irq);
-	return IRQ_NONE;
-}
-
 static int irq_wait_for_interrupt(struct irqaction *action)
 {
 	set_current_state(TASK_INTERRUPTIBLE);
@@ -752,8 +720,7 @@ static int irq_wait_for_interrupt(struct irqaction *action)
 static void irq_finalize_oneshot(struct irq_desc *desc,
 				 struct irqaction *action)
 {
-	if (!(desc->istate & IRQS_ONESHOT) ||
-	    action->handler == irq_forced_secondary_handler)
+	if (!(desc->istate & IRQS_ONESHOT))
 		return;
 again:
 	chip_bus_lock(desc);
@@ -907,18 +874,6 @@ static void irq_thread_dtor(struct callback_head *unused)
 	irq_finalize_oneshot(desc, action);
 }
 
-static void irq_wake_secondary(struct irq_desc *desc, struct irqaction *action)
-{
-	struct irqaction *secondary = action->secondary;
-
-	if (WARN_ON_ONCE(!secondary))
-		return;
-
-	raw_spin_lock_irq(&desc->lock);
-	__irq_wake_thread(desc, secondary);
-	raw_spin_unlock_irq(&desc->lock);
-}
-
 /*
  * Interrupt handler thread
  */
@@ -949,8 +904,6 @@ static int irq_thread(void *data)
 		action_ret = handler_fn(desc, action);
 		if (action_ret == IRQ_HANDLED)
 			atomic_inc(&desc->threads_handled);
-		if (action_ret == IRQ_WAKE_THREAD)
-			irq_wake_secondary(desc, action);
 
 		wake_threads_waitq(desc);
 	}
@@ -995,36 +948,20 @@ void irq_wake_thread(unsigned int irq, void *dev_id)
 }
 EXPORT_SYMBOL_GPL(irq_wake_thread);
 
-static int irq_setup_forced_threading(struct irqaction *new)
+static void irq_setup_forced_threading(struct irqaction *new)
 {
 	if (!force_irqthreads)
-		return 0;
+		return;
 	if (new->flags & (IRQF_NO_THREAD | IRQF_PERCPU | IRQF_ONESHOT))
-		return 0;
+		return;
 
 	new->flags |= IRQF_ONESHOT;
 
-	/*
-	 * Handle the case where we have a real primary handler and a
-	 * thread handler. We force thread them as well by creating a
-	 * secondary action.
-	 */
-	if (new->handler != irq_default_primary_handler && new->thread_fn) {
-		/* Allocate the secondary action */
-		new->secondary = kzalloc(sizeof(struct irqaction), GFP_KERNEL);
-		if (!new->secondary)
-			return -ENOMEM;
-		new->secondary->handler = irq_forced_secondary_handler;
-		new->secondary->thread_fn = new->thread_fn;
-		new->secondary->dev_id = new->dev_id;
-		new->secondary->irq = new->irq;
-		new->secondary->name = new->name;
+	if (!new->thread_fn) {
+		set_bit(IRQTF_FORCED_THREAD, &new->thread_flags);
+		new->thread_fn = new->handler;
+		new->handler = irq_default_primary_handler;
 	}
-	/* Deal with the primary handler */
-	set_bit(IRQTF_FORCED_THREAD, &new->thread_flags);
-	new->thread_fn = new->handler;
-	new->handler = irq_default_primary_handler;
-	return 0;
 }
 
 static int irq_request_resources(struct irq_desc *desc)
@@ -1042,114 +979,6 @@ static void irq_release_resources(struct irq_desc *desc)
 
 	if (c->irq_release_resources)
 		c->irq_release_resources(d);
-}
-
-static int
-setup_irq_thread(struct irqaction *new, unsigned int irq, bool secondary)
-{
-	struct task_struct *t;
-	struct sched_param param = {
-		.sched_priority = MAX_USER_RT_PRIO/2,
-	};
-
-	if (!secondary) {
-		t = kthread_create(irq_thread, new, "irq/%d-%s", irq,
-				   new->name);
-	} else {
-		t = kthread_create(irq_thread, new, "irq/%d-s-%s", irq,
-				   new->name);
-		param.sched_priority -= 1;
-	}
-
-	if (IS_ERR(t))
-		return PTR_ERR(t);
-
-	sched_setscheduler_nocheck(t, SCHED_FIFO, &param);
-
-	/*
-	 * We keep the reference to the task struct even if
-	 * the thread dies to avoid that the interrupt code
-	 * references an already freed task_struct.
-	 */
-	get_task_struct(t);
-	new->thread = t;
-	/*
-	 * Tell the thread to set its affinity. This is
-	 * important for shared interrupt handlers as we do
-	 * not invoke setup_affinity() for the secondary
-	 * handlers as everything is already set up. Even for
-	 * interrupts marked with IRQF_NO_BALANCE this is
-	 * correct as we want the thread to move to the cpu(s)
-	 * on which the requesting code placed the interrupt.
-	 */
-	set_bit(IRQTF_AFFINITY, &new->thread_flags);
-	return 0;
-}
-
-static void add_desc_to_perf_list(struct irq_desc *desc)
-{
-	struct irq_desc_list *item;
-	unsigned long flags;
-
-	item = kmalloc(sizeof(*item), GFP_ATOMIC);
-	if (WARN_ON(!item))
-		return;
-
-	item->desc = desc;
-
-	raw_spin_lock_irqsave(&perf_irqs_lock, flags);
-	list_add(&item->list, &perf_crit_irqs.list);
-	raw_spin_unlock_irqrestore(&perf_irqs_lock, flags);
-}
-
-static void affine_one_perf_thread(struct task_struct *t)
-{
-	t->flags |= PF_PERF_CRITICAL;
-	set_cpus_allowed_ptr(t, cpu_perf_mask);
-}
-
-static void unaffine_one_perf_thread(struct task_struct *t)
-{
-	t->flags &= ~PF_PERF_CRITICAL;
-	set_cpus_allowed_ptr(t, cpu_all_mask);
-}
-
-void unaffine_perf_irqs(void)
-{
-	struct irq_desc_list *data;
-	unsigned long outer_flags;
-
-	raw_spin_lock_irqsave(&perf_irqs_lock, outer_flags);
-	list_for_each_entry(data, &perf_crit_irqs.list, list) {
-		struct irq_desc *desc = data->desc;
-		unsigned long flags;
-
-		raw_spin_lock_irqsave(&desc->lock, flags);
-		irq_set_affinity_locked(&desc->irq_data, cpu_all_mask, true);
-		if (desc->action->thread)
-			unaffine_one_perf_thread(desc->action->thread);
-		raw_spin_unlock_irqrestore(&desc->lock, flags);
-	}
-	raw_spin_unlock_irqrestore(&perf_irqs_lock, outer_flags);
-}
-
-void reaffine_perf_irqs(void)
-{
-	struct irq_desc_list *data;
-	unsigned long outer_flags;
-
-	raw_spin_lock_irqsave(&perf_irqs_lock, outer_flags);
-	list_for_each_entry(data, &perf_crit_irqs.list, list) {
-		struct irq_desc *desc = data->desc;
-		unsigned long flags;
-
-		raw_spin_lock_irqsave(&desc->lock, flags);
-		irq_set_affinity_locked(&desc->irq_data, cpu_perf_mask, true);
-		if (desc->action->thread)
-			affine_one_perf_thread(desc->action->thread);
-		raw_spin_unlock_irqrestore(&desc->lock, flags);
-	}
-	raw_spin_unlock_irqrestore(&perf_irqs_lock, outer_flags);
 }
 
 /*
@@ -1172,8 +1001,6 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	if (!try_module_get(desc->owner))
 		return -ENODEV;
 
-	new->irq = irq;
-
 	/*
 	 * Check whether the interrupt nests into another interrupt
 	 * thread.
@@ -1191,11 +1018,8 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		 */
 		new->handler = irq_nested_primary_handler;
 	} else {
-		if (irq_settings_can_thread(desc)) {
-			ret = irq_setup_forced_threading(new);
-			if (ret)
-				goto out_mput;
-		}
+		if (irq_settings_can_thread(desc))
+			irq_setup_forced_threading(new);
 	}
 
 	/*
@@ -1204,17 +1028,37 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	 * thread.
 	 */
 	if (new->thread_fn && !nested) {
-		ret = setup_irq_thread(new, irq, false);
-		if (ret)
+		struct task_struct *t;
+		static const struct sched_param param = {
+			.sched_priority = MAX_USER_RT_PRIO/2,
+		};
+
+		t = kthread_create(irq_thread, new, "irq/%d-%s", irq,
+				   new->name);
+		if (IS_ERR(t)) {
+			ret = PTR_ERR(t);
 			goto out_mput;
-		if (new->secondary) {
-			ret = setup_irq_thread(new->secondary, irq, true);
-			if (ret)
-				goto out_thread;
 		}
 
-		if (new->flags & IRQF_PERF_CRITICAL)
-			affine_one_perf_thread(new->thread);
+		sched_setscheduler_nocheck(t, SCHED_FIFO, &param);
+
+		/*
+		 * We keep the reference to the task struct even if
+		 * the thread dies to avoid that the interrupt code
+		 * references an already freed task_struct.
+		 */
+		get_task_struct(t);
+		new->thread = t;
+		/*
+		 * Tell the thread to set its affinity. This is
+		 * important for shared interrupt handlers as we do
+		 * not invoke setup_affinity() for the secondary
+		 * handlers as everything is already set up. Even for
+		 * interrupts marked with IRQF_NO_BALANCE this is
+		 * correct as we want the thread to move to the cpu(s)
+		 * on which the requesting code placed the interrupt.
+		 */
+		set_bit(IRQTF_AFFINITY, &new->thread_flags);
 	}
 
 	if (!alloc_cpumask_var(&mask, GFP_KERNEL)) {
@@ -1377,14 +1221,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 		}
 
 		/* Set default affinity mask once everything is setup */
-		if (new->flags & IRQF_PERF_CRITICAL) {
-			add_desc_to_perf_list(desc);
-			irqd_set(&desc->irq_data, IRQD_AFFINITY_MANAGED);
-			irq_set_affinity_locked(&desc->irq_data,
-				cpu_perf_mask, true);
-		} else {
-			setup_affinity(irq, desc, mask);
-		}
+		setup_affinity(irq, desc, mask);
 
 	} else if (new->flags & IRQF_TRIGGER_MASK) {
 		unsigned int nmsk = new->flags & IRQF_TRIGGER_MASK;
@@ -1396,6 +1233,7 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 				   irq, nmsk, omsk);
 	}
 
+	new->irq = irq;
 	*old_ptr = new;
 
 	irq_pm_install_action(desc, new);
@@ -1421,8 +1259,6 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
 	 */
 	if (new->thread)
 		wake_up_process(new->thread);
-	if (new->secondary)
-		wake_up_process(new->secondary->thread);
 
 	register_irq_proc(irq, desc);
 	new->dir = NULL;
@@ -1450,13 +1286,6 @@ out_thread:
 		struct task_struct *t = new->thread;
 
 		new->thread = NULL;
-		kthread_stop(t);
-		put_task_struct(t);
-	}
-	if (new->secondary && new->secondary->thread) {
-		struct task_struct *t = new->secondary->thread;
-
-		new->secondary->thread = NULL;
 		kthread_stop(t);
 		put_task_struct(t);
 	}
@@ -1567,14 +1396,9 @@ static struct irqaction *__free_irq(unsigned int irq, void *dev_id)
 	if (action->thread) {
 		kthread_stop(action->thread);
 		put_task_struct(action->thread);
-		if (action->secondary && action->secondary->thread) {
-			kthread_stop(action->secondary->thread);
-			put_task_struct(action->secondary->thread);
-		}
 	}
 
 	module_put(desc->owner);
-	kfree(action->secondary);
 	return action;
 }
 
@@ -1713,10 +1537,8 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 	retval = __setup_irq(irq, desc, action);
 	chip_bus_sync_unlock(desc);
 
-	if (retval) {
-		kfree(action->secondary);
+	if (retval)
 		kfree(action);
-	}
 
 #ifdef CONFIG_DEBUG_SHIRQ_FIXME
 	if (!retval && (irqflags & IRQF_SHARED)) {

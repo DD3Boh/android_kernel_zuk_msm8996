@@ -71,7 +71,6 @@ struct msi_msg;
  * IRQ_IS_POLLED		- Always polled by another interrupt. Exclude
  *				  it from the spurious interrupt detection
  *				  mechanism and from core side polling.
- * IRQ_AFFINITY_MANAGED		- Affinity is auto-managed by the kernel
  */
 enum {
 	IRQ_TYPE_NONE		= 0x00000000,
@@ -97,14 +96,13 @@ enum {
 	IRQ_NOTHREAD		= (1 << 16),
 	IRQ_PER_CPU_DEVID	= (1 << 17),
 	IRQ_IS_POLLED		= (1 << 18),
-	IRQ_AFFINITY_MANAGED	= (1 << 19),
 };
 
 #define IRQF_MODIFY_MASK	\
 	(IRQ_TYPE_SENSE_MASK | IRQ_NOPROBE | IRQ_NOREQUEST | \
 	 IRQ_NOAUTOEN | IRQ_MOVE_PCNTXT | IRQ_LEVEL | IRQ_NO_BALANCING | \
 	 IRQ_PER_CPU | IRQ_NESTED_THREAD | IRQ_NOTHREAD | IRQ_PER_CPU_DEVID | \
-	 IRQ_IS_POLLED | IRQ_AFFINITY_MANAGED)
+	 IRQ_IS_POLLED)
 
 #define IRQ_NO_BALANCING_MASK	(IRQ_PER_CPU | IRQ_NO_BALANCING)
 
@@ -183,7 +181,6 @@ struct irq_data {
  * IRQD_IRQ_MASKED		- Masked state of the interrupt
  * IRQD_IRQ_INPROGRESS		- In progress state of the interrupt
  * IRQD_WAKEUP_ARMED		- Wakeup mode armed
- * IRQD_AFFINITY_MANAGED	- Affinity is auto-managed by the kernel
  */
 enum {
 	IRQD_TRIGGER_MASK		= 0xf,
@@ -198,7 +195,6 @@ enum {
 	IRQD_IRQ_MASKED			= (1 << 17),
 	IRQD_IRQ_INPROGRESS		= (1 << 18),
 	IRQD_WAKEUP_ARMED		= (1 << 19),
-	IRQD_AFFINITY_MANAGED		= (1 << 20),
 };
 
 static inline bool irqd_is_setaffinity_pending(struct irq_data *d)
@@ -289,11 +285,6 @@ static inline void irqd_set_chained_irq_inprogress(struct irq_data *d)
 static inline void irqd_clr_chained_irq_inprogress(struct irq_data *d)
 {
 	d->state_use_accessors &= ~IRQD_IRQ_INPROGRESS;
-}
-
-static inline bool irqd_affinity_is_managed(struct irq_data *d)
-{
-	return d->state_use_accessors & IRQD_AFFINITY_MANAGED;
 }
 
 static inline irq_hw_number_t irqd_to_hwirq(struct irq_data *d)
