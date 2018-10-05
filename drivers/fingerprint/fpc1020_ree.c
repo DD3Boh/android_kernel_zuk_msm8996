@@ -24,7 +24,6 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/platform_device.h>
-#include <linux/wakelock.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
