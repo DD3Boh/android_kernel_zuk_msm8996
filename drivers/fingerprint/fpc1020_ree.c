@@ -418,10 +418,23 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		container_of(work, typeof(*fpc1020), pm_work);
 
 	/* Escalate fingerprintd priority when screen is off */
-	if (!fpc1020->screen_on)
-		set_fingerprintd_nice(MIN_NICE);
-	else
+	if (fpc1020->screen_on) {
+		/* Unconditionally enable IRQ when screen turns on */
+		config_irq(fpc1020, true);
+		/* Restore fingerprintd priority to defaults */
 		set_fingerprintd_nice(0);
+	} else {
+		if (fpc1020->wakeup_enabled == 0) {
+			/* Disable IRQ when screen turns off,
+			 only if fingerprint wake up is disabled */
+			config_irq(fpc1020, false);
+		} else {
+			/* Elevate fingerprintd priority when screen is off to ensure
+			 * the fingerprint sensor is responsive and that the haptic
+			 * response on successful verification always fires */
+			set_fingerprintd_nice(-1);
+		}
+	}
 }
 
 static int fb_notifier_callback(struct notifier_block *self,
@@ -438,13 +451,9 @@ static int fb_notifier_callback(struct notifier_block *self,
 			pr_err("ScreenOn\n");
 			fpc1020->screen_on = 1;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
-			/* Unconditionally enable IRQ when screen turns on */
-			config_irq(fpc1020, true);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
-			if (fpc1020->wakeup_enabled == 0)
-				config_irq(fpc1020, false);
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
