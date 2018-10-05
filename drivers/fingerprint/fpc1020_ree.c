@@ -101,9 +101,9 @@ static ssize_t irq_set(struct device *device,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(device);
 
 	retval = kstrtou64(buffer, 0, &val);
-	if (val == 1)
+	if (val)
 		enable_irq(fpc1020->irq);
-	else if (val == 0)
+	else if (!val)
 		disable_irq(fpc1020->irq);
 	else
 		return -ENOENT;
@@ -194,10 +194,10 @@ static ssize_t proximity_state_set(struct device *dev,
 		return -EINVAL;
 	fpc1020->proximity_state = !!val;
 	if (!fpc1020->screen_on) {
-		if (fpc1020->proximity_state == 1) {
+		if (fpc1020->proximity_state) {
 			/* Disable IRQ when screen is off and proximity sensor is covered */
 			config_irq(fpc1020, false);
-		} else if (fpc1020->wakeup_enabled == 1) {
+		} else if (fpc1020->wakeup_enabled) {
 			/* Enable IRQ when screen is off and proximity sensor is uncovered,
 			 but only if fingerprint wake up is enabled */
 			 config_irq(fpc1020, true);
@@ -224,7 +224,7 @@ static void fpc1020_report_work_func(struct work_struct *work)
 	struct fpc1020_data *fpc1020 = NULL;
 
 	fpc1020 = container_of(work, struct fpc1020_data, input_report_work);
-	if (fpc1020->screen_on == 1) {
+	if (fpc1020->screen_on) {
 		pr_info("Report key value = %d\n", (int)fpc1020->report_key);
 		input_report_key(fpc1020->input_dev, fpc1020->report_key, 1);
 		input_sync(fpc1020->input_dev);
@@ -424,7 +424,7 @@ static void fpc1020_suspend_resume(struct work_struct *work)
 		/* Restore fingerprintd priority to defaults */
 		set_fingerprintd_nice(0);
 	} else {
-		if (fpc1020->wakeup_enabled == 0) {
+		if (!fpc1020->wakeup_enabled) {
 			/* Disable IRQ when screen turns off,
 			 only if fingerprint wake up is disabled */
 			config_irq(fpc1020, false);
