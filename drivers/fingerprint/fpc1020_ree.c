@@ -186,6 +186,36 @@ static ssize_t utouch_show_disable(struct device *dev,
 }
 static DEVICE_ATTR(utouch_disable, S_IRUGO|S_IWUSR, utouch_show_disable, utouch_store_disable);
 
+static ssize_t enable_wakeup_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+	char c;
+
+	c = fpc1020->wakeup_enabled ? '1' : '0';
+	return scnprintf(buf, PAGE_SIZE, "%c\n", c);
+}
+
+static ssize_t enable_wakeup_store(struct device *dev,
+			struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
+	int i;
+
+	if (sscanf(buf, "%u", &i) == 1 && i < 2) {
+		fpc1020->wakeup_enabled = (i == 1);
+
+		dev_info(dev, "%s\n", i ? "wakeup enabled" : "wakeup disabled");
+		return count;
+	} else {
+		dev_info(dev, "%s: wakeup_enabled write error\n", __func__);
+		return -EINVAL;
+	}
+}
+static DEVICE_ATTR(enable_wakeup, S_IWUSR | S_IRUSR, enable_wakeup_show,
+			enable_wakeup_store);
+
+
 static ssize_t proximity_state_set(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -212,6 +242,7 @@ static DEVICE_ATTR(proximity_state, S_IWUSR, NULL, proximity_state_set);
 static struct attribute *attributes[] = {
 	&dev_attr_irq.attr,
 	&dev_attr_key.attr,
+	&dev_attr_enable_wakeup.attr,
 	&dev_attr_proximity_state.attr,
 	&dev_attr_utouch_disable.attr,
 	NULL
@@ -299,7 +330,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 {
 	int retval = 0;
-
+	int irqf;
 	if (!gpio_is_valid(fpc1020->irq_gpio)) {
 		pr_err("IRQ pin(%d) is not valid\n", fpc1020->irq_gpio);
 		return -EINVAL;
@@ -323,12 +354,15 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		return -EINVAL;
 	}
 
-	device_init_wakeup(fpc1020->dev, 1);
-	fpc1020->wakeup_enabled = 1;
+	irqf = IRQF_TRIGGER_RISING | IRQF_ONESHOT;
+	if (of_property_read_bool(fpc1020->dev->of_node, "fpc,enable-wakeup")) {
+		irqf |= IRQF_NO_SUSPEND;
+		device_init_wakeup(fpc1020->dev, 1);
+		fpc1020->wakeup_enabled = 1;
+	}
 
 	retval = devm_request_threaded_irq(fpc1020->dev,
-			fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_NO_SUSPEND,
+			fpc1020->irq, NULL, fpc1020_irq_handler, irqf,
 			dev_name(fpc1020->dev), fpc1020);
 
 	if (retval) {
