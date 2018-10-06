@@ -48,8 +48,6 @@
 #define MSM_EEPROM_MEMORY_MAP_MAX_SIZE  80
 #define MSM_EEPROM_MAX_MEM_MAP_CNT      8
 
-#define MSM_SENSOR_BYPASS_VIDEO_NODE    1
-
 #define FRONT_AUX_SENSOR_SUPPORT
 
 enum msm_sensor_camera_id_t {
@@ -211,13 +209,6 @@ enum msm_ir_led_cfg_type_t {
 #define CFG_IR_LED_OFF CFG_IR_LED_OFF
 #define CFG_IR_LED_ON CFG_IR_LED_ON
 
-enum msm_laser_led_cfg_type_t {
-	CFG_LASER_LED_INIT,
-	CFG_LASER_LED_CONTROL,
-};
-#define CFG_LASER_LED_INIT CFG_LASER_LED_INIT
-#define CFG_LASER_LED_CONTROL CFG_LASER_LED_CONTROL
-
 enum msm_ir_cut_cfg_type_t {
 	CFG_IR_CUT_INIT = 0,
 	CFG_IR_CUT_RELEASE,
@@ -316,7 +307,6 @@ struct msm_camera_sensor_slave_info {
 	unsigned char  is_init_params_valid;
 	struct msm_sensor_init_params sensor_init_params;
 	enum msm_sensor_output_format_t output_format;
-	uint8_t bypass_video_node_creation;
 };
 
 struct msm_camera_i2c_reg_array {
