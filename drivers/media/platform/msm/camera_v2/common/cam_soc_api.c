@@ -41,7 +41,7 @@ struct msm_cam_bus_pscale_data g_cv[CAM_BUS_CLIENT_MAX];
 
 
 /* Get all clocks from DT */
-static int msm_camera_get_clk_info_internal(struct device *dev,
+int msm_camera_get_clk_info(struct platform_device *pdev,
 			struct msm_cam_clk_info **clk_info,
 			struct clk ***clk_ptr,
 			size_t *num_clk)
@@ -53,7 +53,10 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 	bool clock_cntl_support = false;
 	struct device_node *of_node;
 
-	of_node = dev->of_node;
+	if (!pdev || !clk_info || !num_clk)
+		return -EINVAL;
+
+	of_node = pdev->dev.of_node;
 
 	cnt = of_property_count_strings(of_node, "clock-names");
 	if (cnt <= 0) {
@@ -91,19 +94,19 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 
 	*num_clk = cnt;
 
-	*clk_info = devm_kcalloc(dev, cnt,
+	*clk_info = devm_kcalloc(&pdev->dev, cnt,
 				sizeof(struct msm_cam_clk_info), GFP_KERNEL);
 	if (!*clk_info)
 		return -ENOMEM;
 
-	*clk_ptr = devm_kcalloc(dev, cnt, sizeof(struct clk *),
+	*clk_ptr = devm_kcalloc(&pdev->dev, cnt, sizeof(struct clk *),
 				GFP_KERNEL);
 	if (!*clk_ptr) {
 		rc = -ENOMEM;
 		goto err1;
 	}
 
-	rates = devm_kcalloc(dev, cnt, sizeof(long), GFP_KERNEL);
+	rates = devm_kcalloc(&pdev->dev, cnt, sizeof(long), GFP_KERNEL);
 	if (!rates) {
 		rc = -ENOMEM;
 		goto err2;
@@ -158,7 +161,7 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 			i, (*clk_info)[i].clk_rate);
 
 		(*clk_ptr)[i] =
-			devm_clk_get(dev, (*clk_info)[i].clk_name);
+			devm_clk_get(&pdev->dev, (*clk_info)[i].clk_name);
 		if (IS_ERR((*clk_ptr)[i])) {
 			rc = PTR_ERR((*clk_ptr)[i]);
 			goto err4;
@@ -166,50 +169,18 @@ static int msm_camera_get_clk_info_internal(struct device *dev,
 		CDBG("clk ptr[%d] :%pK\n", i, (*clk_ptr)[i]);
 	}
 
-	devm_kfree(dev, rates);
+	devm_kfree(&pdev->dev, rates);
 	return rc;
 
 err4:
 	for (--i; i >= 0; i--)
-		devm_clk_put(dev, (*clk_ptr)[i]);
+		devm_clk_put(&pdev->dev, (*clk_ptr)[i]);
 err3:
-	devm_kfree(dev, rates);
+	devm_kfree(&pdev->dev, rates);
 err2:
-	devm_kfree(dev, *clk_ptr);
+	devm_kfree(&pdev->dev, *clk_ptr);
 err1:
-	devm_kfree(dev, *clk_info);
-	return rc;
-}
-
-/* Get all clocks from DT  for I2C devices */
-int msm_camera_i2c_dev_get_clk_info(struct device *dev,
-			struct msm_cam_clk_info **clk_info,
-			struct clk ***clk_ptr,
-			size_t *num_clk)
-{
-	int rc = 0;
-
-	if (!dev || !clk_info || !clk_ptr || !num_clk)
-		return -EINVAL;
-
-	rc = msm_camera_get_clk_info_internal(dev, clk_info, clk_ptr, num_clk);
-	return rc;
-}
-EXPORT_SYMBOL(msm_camera_i2c_dev_get_clk_info);
-
-/* Get all clocks from DT  for platform devices */
-int msm_camera_get_clk_info(struct platform_device *pdev,
-			struct msm_cam_clk_info **clk_info,
-			struct clk ***clk_ptr,
-			size_t *num_clk)
-{
-	int rc = 0;
-
-	if (!pdev || (&pdev->dev == NULL) || !clk_info || !clk_ptr || !num_clk)
-		return -EINVAL;
-
-	rc = msm_camera_get_clk_info_internal(&pdev->dev,
-			clk_info, clk_ptr, num_clk);
+	devm_kfree(&pdev->dev, *clk_info);
 	return rc;
 }
 EXPORT_SYMBOL(msm_camera_get_clk_info);
@@ -466,7 +437,7 @@ int msm_camera_set_clk_flags(struct clk *clk, unsigned long flags)
 EXPORT_SYMBOL(msm_camera_set_clk_flags);
 
 /* release memory allocated for clocks */
-static int msm_camera_put_clk_info_internal(struct device *dev,
+int msm_camera_put_clk_info(struct platform_device *pdev,
 				struct msm_cam_clk_info **clk_info,
 				struct clk ***clk_ptr, int cnt)
 {
@@ -474,45 +445,15 @@ static int msm_camera_put_clk_info_internal(struct device *dev,
 
 	for (i = cnt - 1; i >= 0; i--) {
 		if (clk_ptr[i] != NULL)
-			devm_clk_put(dev, (*clk_ptr)[i]);
+			devm_clk_put(&pdev->dev, (*clk_ptr)[i]);
 
 		CDBG("clk ptr[%d] :%pK\n", i, (*clk_ptr)[i]);
 	}
-	devm_kfree(dev, *clk_info);
-	devm_kfree(dev, *clk_ptr);
+	devm_kfree(&pdev->dev, *clk_info);
+	devm_kfree(&pdev->dev, *clk_ptr);
 	*clk_info = NULL;
 	*clk_ptr = NULL;
 	return 0;
-}
-
-/* release memory allocated for clocks for i2c devices */
-int msm_camera_i2c_dev_put_clk_info(struct device *dev,
-				struct msm_cam_clk_info **clk_info,
-				struct clk ***clk_ptr, int cnt)
-{
-	int rc = 0;
-
-	if (!dev || !clk_info || !clk_ptr)
-		return -EINVAL;
-
-	rc = msm_camera_put_clk_info_internal(dev, clk_info, clk_ptr, cnt);
-	return rc;
-}
-EXPORT_SYMBOL(msm_camera_i2c_dev_put_clk_info);
-
-/* release memory allocated for clocks for platform devices */
-int msm_camera_put_clk_info(struct platform_device *pdev,
-				struct msm_cam_clk_info **clk_info,
-				struct clk ***clk_ptr, int cnt)
-{
-	int rc = 0;
-
-	if (!pdev || (&pdev->dev == NULL) || !clk_info || !clk_ptr)
-		return -EINVAL;
-
-	rc = msm_camera_put_clk_info_internal(&pdev->dev,
-			clk_info, clk_ptr, cnt);
-	return rc;
 }
 EXPORT_SYMBOL(msm_camera_put_clk_info);
 
