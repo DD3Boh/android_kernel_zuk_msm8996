@@ -448,11 +448,11 @@ static int fb_notifier_callback(struct notifier_block *self,
 	if (evdata && evdata->data && event == FB_EVENT_BLANK && fpc1020) {
 		blank = evdata->data;
 		if (*blank == FB_BLANK_UNBLANK) {
-			pr_err("ScreenOn\n");
+			pr_debug("ScreenOn\n");
 			fpc1020->screen_on = 1;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		} else if (*blank == FB_BLANK_POWERDOWN) {
-			pr_err("ScreenOff\n");
+			pr_debug("ScreenOff\n");
 			fpc1020->screen_on = 0;
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
