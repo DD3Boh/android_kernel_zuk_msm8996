@@ -206,7 +206,7 @@
 };
 
 &labibb {
-	qpnp,qpnp-labibb-mode = "amoled";
+	qcom,qpnp-labibb-mode = "amoled";
 };
 
 &cclogic_defaultnone_active {
