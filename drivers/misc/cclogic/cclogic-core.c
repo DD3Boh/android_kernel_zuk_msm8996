@@ -94,7 +94,7 @@ static int cclogic_reg_set_optimum_mode_check(struct regulator *reg,
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
 	return (regulator_count_voltages(reg) > 0) ?
-		regulator_set_optimum_mode(reg, load_uA) : 0;
+		regulator_set_load(reg, load_uA) : 0;
 }
 /*
  *
@@ -1587,7 +1587,7 @@ static int cclogic_remove(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 /*
  *
  */
