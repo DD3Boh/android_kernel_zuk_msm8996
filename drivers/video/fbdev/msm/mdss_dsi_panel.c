@@ -22,6 +22,24 @@
 #include <linux/qpnp/pwm.h>
 #include <linux/err.h>
 #include <linux/string.h>
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+#include <linux/irq.h>
+#include <linux/gpio.h>
+#include <linux/workqueue.h>
+#include <linux/time.h>
+ #include <linux/fs.h>
+#include <linux/string.h>
+#include <asm/uaccess.h>
+#include "mdss_fb.h"
+#include "mdss_ams520.h"
+ #include <linux/init.h>
+#include <linux/i2c.h>
+#include <linux/slab.h>
+#include <linux/gpio.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+#include <linux/regulator/consumer.h>
+#endif
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
@@ -32,6 +50,31 @@
 #define DEFAULT_MDP_TRANSFER_TIME 14000
 
 #define VSYNC_DELAY msecs_to_jiffies(17)
+
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+struct panel_effect_data lcd_data;
+ int is_show_lcd_param = 0;
+extern struct msm_fb_data_type *mfd_priv;
+ int show_lcd_param(struct dsi_cmd_desc *cmds, int cmd_cnt)
+{
+	int i, j;
+		printk("======================================= cmds_cnt %d =========================================\n", cmd_cnt);
+	for (i = 0; i < cmd_cnt; i++) {
+			printk("%2x %2x %2x %2x %2x %2x ", cmds[i].dchdr.dtype,
+					cmds[i].dchdr.last,
+					cmds[i].dchdr.vc,
+					cmds[i].dchdr.ack,
+					cmds[i].dchdr.wait,
+					cmds[i].dchdr.dlen);
+		for (j = 0; j < cmds[i].dchdr.dlen; j++) {
+			printk("%2x ", cmds[i].payload[j]);
+		}
+		printk("\n");
+	}
+	pr_debug("===========================================================================================\n");
+	return 0;
+}
+#endif
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
 
@@ -246,6 +289,167 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
 }
+
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+static int lcd_register_rwlen=2;
+static int lcd_register_id=0;
+static int lcd_register_value=0;
+static char lcd_register[8] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};	/* DTYPE_DCS_WRITE1 */
+static struct mdss_dsi_ctrl_pdata *registerctrl;
+static struct dsi_cmd_desc write_register_cmd = {
+	{DTYPE_GEN_LWRITE, 1, 0, 0, 1, 2},
+	lcd_register
+};
+static struct dsi_cmd_desc read_register_cmd = {
+	{DTYPE_GEN_READ, 1, 0, 1, 5, 2},
+	lcd_register
+};
+ static int mdss_dsi_read_register(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct dcs_cmd_req cmdreq;
+	int i = 0;
+ 	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = &read_register_cmd;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
+	cmdreq.rlen = 2;//ctrl->status_cmds_rlen;
+	cmdreq.cb = NULL;
+ 	if(ctrl && ctrl->panel_data.panel_info.panel_power_state) {
+		cmdreq.rbuf = ctrl->status_buf.data;
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		printk("%s: LCD register 0x%02x value:\n", __func__,lcd_register_id);
+		for(i=0; i<lcd_register_rwlen; i++){
+			printk("0x%02x ", ctrl->status_buf.data[i]);
+		}
+		printk("\n");
+		return ctrl->status_buf.data[0];
+	} else {
+		pr_err("%s: LCD panel have powered off\n", __func__);
+		return -1;
+	}
+}
+void mdss_dsi_write_register(struct mdss_dsi_ctrl_pdata *ctrl)
+{
+	struct dcs_cmd_req cmdreq;
+ 	//pr_err(KERN_ERR"%s,ndx=%d \n", __func__,ctrl->ndx);
+	memset(&cmdreq, 0, sizeof(cmdreq));
+	cmdreq.cmds = &write_register_cmd;
+	cmdreq.cmds_cnt = 1;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
+	cmdreq.rlen = 0;
+	cmdreq.cb = NULL;
+ 	if(ctrl && ctrl->panel_data.panel_info.panel_power_state)
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+	else
+		pr_err("%s: LCD panel have powered off\n", __func__);
+ }
+ static int set_lcd_register_rwlen_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+ 	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_register_rwlen = *((int*)kp->arg);
+	if(lcd_register_rwlen > sizeof(lcd_register)){
+		printk("%s register read write max length is %d\n", __func__,(int)sizeof(lcd_register));
+		lcd_register_rwlen = 2;
+		return 0;
+		}
+	write_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+	read_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+ 	printk("%s register read write length is:%d\n", __func__,lcd_register_rwlen);
+	return 0;
+}
+ static int get_lcd_register_rwlen_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_register_rwlen);
+	printk("%s register read write leagth is:0x%02x\n", __func__,lcd_register_rwlen);
+	return ret;
+}
+ static int set_lcd_register_id_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+ 	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_register_id = *((int*)kp->arg);
+	lcd_register[0]=lcd_register_id;
+ 	printk("%s register id is:%d\n", __func__,lcd_register_id);
+	return 0;
+}
+ static int get_lcd_register_id_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_register_id);
+	printk("%s register id is:0x%02x\n", __func__,lcd_register_id);
+	return ret;
+}
+ static int set_lcd_register_value_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_ulong(val, kp);
+	int i = 0;
+	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+ 	lcd_register_value = *((int*)kp->arg);
+	printk("%s register value is:0x%08x ", __func__,lcd_register_value);
+	for(i=0; i<lcd_register_rwlen; i++){
+		lcd_register[i] = (lcd_register_value >> (lcd_register_rwlen - 1 - i)*8);
+		printk("0x%02x ", lcd_register[i]);
+	}
+	printk("\n");
+	mdss_dsi_write_register(registerctrl);
+ 	for(i=0; i<sizeof(lcd_register); i++)//8 need change with length
+		lcd_register[i] = 0x00;
+	lcd_register_rwlen = 2;
+	write_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+	read_register_cmd.dchdr.dlen = (short)lcd_register_rwlen;
+ 	return 0;
+}
+ static int get_lcd_register_value_func(char *val, struct kernel_param *kp)
+{
+	int ret=0;
+ 	lcd_register_value = mdss_dsi_read_register(registerctrl);
+ 	ret=sprintf(val, "0x%02x\n", lcd_register_value);
+	pr_err(KERN_ERR"%s register value is:0x%02x\n", __func__,lcd_register_value);
+	//pr_err(KERN_ERR"%s register value 2 is:0x%02x\n", __func__,registerctrl->status_buf.data[1]);
+	return ret;
+}
+module_param_call(lcdrwlen, set_lcd_register_rwlen_func,get_lcd_register_rwlen_func, &lcd_register_rwlen, S_IRUSR | S_IWUSR);
+module_param_call(lcdid, set_lcd_register_id_func,get_lcd_register_id_func, &lcd_register_id, S_IRUSR | S_IWUSR);
+module_param_call(lcdvalue, set_lcd_register_value_func,get_lcd_register_value_func, &lcd_register_value, S_IRUSR | S_IWUSR);
+static int lcd_overturn = 0;
+static int get_lcd_overturn_func(char *val, struct kernel_param *kp)
+{
+	int ret=sprintf(val, "0x%02x\n", lcd_overturn);
+	pr_err(KERN_ERR"%s lcd_overturn is:0x%02x\n", __func__,lcd_overturn);
+	return ret;
+}
+static int set_lcd_overturn_func(const char *val, struct kernel_param *kp)
+{
+	int ret = param_set_int(val, kp);
+ 	if(ret < 0)
+	{
+		pr_err(KERN_ERR"%s Invalid argument\n", __func__);
+		return -EINVAL;
+	}
+	lcd_overturn = *((int*)kp->arg);
+	lcd_register[0]=0x36;
+	if(lcd_overturn)
+		lcd_register[1]=0xc0;
+	else
+		lcd_register[1]=0x0;
+ 	mdss_dsi_write_register(registerctrl);
+ 	pr_err(KERN_ERR"%s lcdoverturn is:%d\n", __func__,lcd_overturn);
+	return 0;
+}
+module_param_call(lcdoverturn, set_lcd_overturn_func,get_lcd_overturn_func, &lcd_overturn, S_IRUSR | S_IWUSR);
+#endif
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
@@ -948,8 +1152,12 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+	update_init_code(ctrl, &lcd_data, (void *)mdss_dsi_panel_cmds_send);
+#else
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
+#endif
 
 	if (pinfo->compression_mode == COMPRESSION_DSC)
 		mdss_dsi_panel_dsc_pps_send(ctrl, pinfo);
@@ -2627,12 +2835,29 @@ static int  mdss_dsi_panel_config_res_properties(struct device_node *np,
 		bool default_timing)
 {
 	int rc = 0;
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+	lcd_data = lcd_ams520_data;
+#endif
 
 	mdss_dsi_parse_roi_alignment(np, pt);
 
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+	rc = mdss_dsi_parse_dcs_cmds(np, &pt->on_cmds,
+#else
 	mdss_dsi_parse_dcs_cmds(np, &pt->on_cmds,
+#endif
 		"qcom,mdss-dsi-on-command",
 		"qcom,mdss-dsi-on-command-state");
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+	if (!rc) {
+		lcd_data.save_cmd.cmd = pt->on_cmds.cmds;
+		lcd_data.save_cmd.cnt = pt->on_cmds.cmd_cnt;
+		rc = malloc_lcd_effect_code_buf(&lcd_data);
+		if (rc) {
+			printk("malloc_lcd_effect_code_buf failure\n");
+		}
+	}
+#endif
 
 	mdss_dsi_parse_dcs_cmds(np, &pt->post_panel_on_cmds,
 		"qcom,mdss-dsi-post-panel-on-command", NULL);
