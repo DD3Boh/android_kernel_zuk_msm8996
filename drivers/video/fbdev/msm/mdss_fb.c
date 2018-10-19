@@ -55,6 +55,9 @@
 #include "mdss_debug.h"
 #include "mdss_smmu.h"
 #include "mdss_mdp.h"
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+#include "lcd_effect.h"
+#endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MDSS_FB_NUM 3
@@ -81,6 +84,10 @@
  * Default value is set to 1 sec.
  */
 #define MDP_TIME_PERIOD_CALC_FPS_US	1000000
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+extern struct panel_effect_data lcd_data;
+struct msm_fb_data_type *mfd_priv;
+#endif
 
 static struct fb_info *fbi_list[MAX_FBI_LIST];
 static int fbi_list_index;
