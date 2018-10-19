@@ -98,6 +98,9 @@ struct dsi_cmd_desc {
 #define CMD_REQ_MAX     4
 #define CMD_REQ_RX      0x0001
 #define CMD_REQ_COMMIT  0x0002
+#ifdef CONFIG_MACH_ZUK_Z2_ROW
+#define CMD_CLK_CTRL    0x0004
+#endif
 #define CMD_CLK_CTRL    0x0004
 #define CMD_REQ_UNICAST 0x0008
 #define CMD_REQ_DMA_TPG 0x0040
