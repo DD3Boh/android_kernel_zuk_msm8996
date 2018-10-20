@@ -44,6 +44,7 @@ struct fpc1020_data {
 	int reset_gpio;
 	int irq_gpio;
 	int irq;
+	bool irq_enabled;
 	int wakeup_enabled;
 	struct notifier_block fb_notif;
 	/*Input device*/
@@ -58,18 +59,18 @@ struct fpc1020_data {
 
 static void config_irq(struct fpc1020_data *fpc1020, bool enabled)
 {
-	if (enabled != fpc1020->irq) {
+	if (enabled != fpc1020->irq_enabled) {
 		if (enabled)
 			enable_irq(gpio_to_irq(fpc1020->irq_gpio));
 		else
 			disable_irq(gpio_to_irq(fpc1020->irq_gpio));
 
 		dev_info(fpc1020->dev, "%s: %s fpc irq ---\n", __func__,
-				 enabled ?  "1" : "0");
-		fpc1020->irq = enabled;
+			enabled ?  "enable" : "disable");
+		fpc1020->irq_enabled = enabled;
 	} else {
 		dev_info(fpc1020->dev, "%s: dual config irq status: %s\n", __func__,
-				 enabled ?  "1" : "0");
+			enabled ?  "true" : "false");
 	}
 }
 
@@ -379,7 +380,7 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 	if (fpc1020->wakeup_enabled) {
 		enable_irq_wake(gpio_to_irq(fpc1020->irq_gpio));
 	}
-	fpc1020->irq = true;
+	fpc1020->irq_enabled = true;
 
 	return 0;
 }
