@@ -366,19 +366,19 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		fpc1020->wakeup_enabled = 1;
 	}
 
-	retval = devm_request_threaded_irq(fpc1020->dev, gpio_to_irq(fpc1020->irq_gpio),
+	retval = devm_request_threaded_irq(fpc1020->dev, fpc1020->irq,
 		NULL, fpc1020_irq_handler, irqf,
 		dev_name(fpc1020->dev), fpc1020);
 	if (retval) {
-		pr_err("request irq %i failed.\n", gpio_to_irq(fpc1020->irq_gpio));
+		pr_err("request irq %i failed.\n", fpc1020->irq);
 		fpc1020->irq = -EINVAL;
 		return -EINVAL;
 	}
 
-	dev_info(fpc1020->dev, "requested irq %d\n", gpio_to_irq(fpc1020->irq_gpio));
+	dev_info(fpc1020->dev, "requested irq %d\n", fpc1020->irq);
 	/* Request that the interrupt should be wakeable*/
 	if (fpc1020->wakeup_enabled) {
-		enable_irq_wake(gpio_to_irq(fpc1020->irq_gpio));
+		enable_irq_wake(fpc1020->irq);
 	}
 	fpc1020->irq_enabled = true;
 
