@@ -810,21 +810,30 @@ s32 gt1x_reset_guitar(void)
 
 	GTP_INFO("GTP RESET!");
 
-#if GTP_INCELL_PANEL
+#ifdef CONFIG_GTP_INCELL_PANEL
 	ret = gt1x_incell_reset();
 	if (ret < 0)
 		return ret;
-#else 
+#else
 	gt1x_select_addr();
-	msleep(8);     //must >= 6ms
+	usleep_range(8000, 8000);     //must >= 6ms
 #endif
 
-	/* int synchronization */
-	msleep(10);
+/* INT gpio is used to select i2c slave address
+ * during hardware reset, and INT synchronization
+ * flow informs the firmware that address selection
+ * has finished,if the kernel restricts the output
+ * of the gpio tied to IRQ line(kernel3.13 and
+ * later version), do the following steps:
+ *   1) select N to CONFIG_GTP_INT_SEL_SYNC
+ *      in menuconfig.
+ *   2) config pinctrl dts, pull-up INT gpio.
+ *   3) chose falling-edge IRQ trigger type.
+ */
+	GTP_GPIO_OUTPUT(GTP_INT_PORT, 0);
+	msleep(50);
 	GTP_GPIO_AS_INT(GTP_INT_PORT);
 
-	/* this operation is necessary even when the esd check 
-		fucntion dose not turn on */
 	ret = gt1x_set_reset_status();
 	return ret;
 }
