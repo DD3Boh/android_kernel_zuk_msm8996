@@ -2237,7 +2237,14 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 #define DEFAULT_CAPACITY	65
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
+#if defined(CONFIG_MACH_ZUK_Z2_PLUS) || defined(CONFIG_MACH_ZUK_Z2_ROW)
+/*
+* ZUK batteries go only to 252.
+*/
+#define FULL_SOC_RAW		0xFC
+#else
 #define FULL_SOC_RAW		0xFF
+#endif
 static int get_prop_capacity(struct fg_chip *chip)
 {
 	int msoc, rc;
