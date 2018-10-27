@@ -1175,7 +1175,7 @@ VosWDThread
          * Process here and return without processing any SSR
          * related logic.
          */
-        break;
+       break;
       }
       /* Check for any Active Entry Points
        * If active, delay SSR until no entry point is active or
