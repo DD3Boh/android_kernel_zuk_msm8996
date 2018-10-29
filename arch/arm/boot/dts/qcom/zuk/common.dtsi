@@ -219,34 +219,6 @@
 			};
 		};
 	};
-	max86x00_mux {
-		default {
-			mux {
-				pins = "gpio123";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio123";
-				drive-strength = <0x2>;
-				bias-pull-up;
-			};
-		};
-	};
-	
-	/*add for max86x00*/
-	max86x00_mux {
-		max86x00_default: default {
-			mux {
-				pins = "gpio123";
-				function = "gpio";
-			};
-			config {
-				pins = "gpio123";
-				drive-strength = <2>;
-				bias-pull-up;
-			};
-		};
-	};
 };
 
 &ts_active {
