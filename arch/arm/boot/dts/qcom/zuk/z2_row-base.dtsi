@@ -81,57 +81,6 @@
 				FF FF FF FF FF FF FF FF FF FF
 				FF FF FF FF 90 01];
 		};
-
-		focaltech@38 {
-			compatible = "focaltech,fts";
-			reg = <0x38>;
-			interrupt-parent = <&tlmm>;
-			interrupts = <125 0x2008>;
-			vdd-supply = <&pm8994_l22>;
-			vcc_i2c-supply = <&pm8994_l18>;
-			/* pins used by touchscreen */
-			pinctrl-names = "ts_active","ts_suspend";
-			pinctrl-0 = <&ts_active>;
-			pinctrl-1 = <&ts_suspend>;
-			focaltech,name = "ft5436";
-			focaltech,family-id = <0x06>;
-			focaltech,reset-gpio = <&tlmm 9 0x0>;
-			focaltech,irq-gpio = <&tlmm 125 0x2008>;
-			focaltech,display-coords = <0 0 1080 1920>;
-			focaltech,panel-coords = <0 0 1080 1920>;
-			focaltech,button-map= <139 102 158>;
-			focaltech,no-force-update;
-			focaltech,i2c-pull-up;
-			focaltech,group-id = <1>;
-			focaltech,hard-reset-delay-ms = <2>;
-			focaltech,soft-reset-delay-ms = <150>;
-			focaltech,num-max-touches = <10>;
-			focaltech,fw-delay-aa-ms = <30>;
-			focaltech,fw-delay-55-ms = <30>;
-			focaltech,fw-upgrade-id1 = <0x79>;
-			focaltech,fw-upgrade-id2 = <0x08>;
-			focaltech,fw-delay-readid-ms = <10>;
-			focaltech,fw-delay-era-flsh-ms = <2000>;
-			focaltech,fw-auto-cal;
-			focaltech,ignore-id-check;
-		};
-	};
-
-	i2c@7579000 { /*this is for maxim_sensor max86100*/
-		status = "ok";
-		max86x00@57 {
-			compatible = "max86x00";
-			reg = <0x57>;
-			interrupt-parent = <&tlmm>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&max86x00_default>;
-			interrupts = <123 0x1>;
-			vcc_i2c-supply = <&pm8994_lvs2>;
-			max86x00,hrm_int-gpio = <&tlmm 123 0x0>;
-			max86x00,hrm_en-gpio = <&tlmm 47 0x1>;
-			max86x00,vdd_1p8 = "maxim_i2c_vdd";
-			max86x00,i2c-pull-up;
-		};
 	};
 
 	i2c@7575000 {
