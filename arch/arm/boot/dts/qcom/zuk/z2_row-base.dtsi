@@ -167,6 +167,18 @@
 			reset-gpio = <&tlmm 49 0x00>;
 		};
 	};
+
+	qcom,msm-dai-tdm-quat-rx {
+		/delete-property/ pinctrl-names;
+		/delete-property/ pinctrl-0;
+		/delete-property/ pinctrl-1;
+	};
+
+	qcom,msm-dai-tdm-quat-tx {
+		/delete-property/ pinctrl-names;
+		/delete-property/ pinctrl-0;
+		/delete-property/ pinctrl-1;
+	};
 };
 
 &tlmm {
