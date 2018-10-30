@@ -9548,7 +9548,7 @@ static int msm_dai_q6_tdm_dev_probe(struct platform_device *pdev)
 	}
 	pdev->id = tdm_dev_id;
 
-	dev_info(&pdev->dev, "%s: dev_name: %s dev_id: 0x%x\n",
+	dev_dbg(&pdev->dev, "%s: dev_name: %s dev_id: 0x%x\n",
 		__func__, dev_name(&pdev->dev), tdm_dev_id);
 
 	dai_data = kzalloc(sizeof(struct msm_dai_q6_tdm_dai_data),
@@ -9694,7 +9694,7 @@ static int msm_dai_q6_tdm_dev_probe(struct platform_device *pdev)
 		custom_tdm_header->header_type =
 			AFE_CUSTOM_TDM_HEADER_TYPE_INVALID;
 	} else {
-		dev_info(&pdev->dev,
+		dev_dbg(&pdev->dev,
 			"%s: Custom tdm header not supported\n", __func__);
 		/* CUSTOM TDM HEADER CFG -- set default */
 		custom_tdm_header->header_type =
