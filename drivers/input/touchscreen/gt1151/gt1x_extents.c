@@ -665,12 +665,14 @@ static long gt1x_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	u32 value = 0;
 	s32 ret = 0;		//the initial value must be 0
 	u8 *data = NULL;
-	int cnt = 30;
 
+#if GTP_AUTO_UPDATE
+	int cnt = 30;
 	/* Blocking when firmwaer updating */
 	while (cnt-- && update_info.status) {
 		ssleep(1);
 	}
+#endif
 
 	//GTP_DEBUG("IOCTL CMD:%x", cmd);
 	/* GTP_DEBUG("command:%d, length:%d, rw:%s",

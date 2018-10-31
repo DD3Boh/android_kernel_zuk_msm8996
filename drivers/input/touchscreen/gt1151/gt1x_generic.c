@@ -238,11 +238,13 @@ static ssize_t gt1x_debug_write_proc(struct file *file, const char *buffer, size
 		return count;
 	}
 #endif
+#if GTP_AUTO_UPDATE
 	sscanf(buf, "%s %s", (char *)&mode_str, (char *)&arg1);
 	if (strcmp(mode_str, "update") == 0) {
 		gt1x_update_firmware(arg1);
 		return count;
 	}
+#endif
 
 	if (strcmp(mode_str, "sendconfig") == 0) {
 		cfg_len = gt1x_parse_config(arg1, temp_config);
@@ -258,10 +260,12 @@ static ssize_t gt1x_debug_write_proc(struct file *file, const char *buffer, size
 		gt1x_gesture_debug(!!mode);
 #endif
 	}
-
+#if GTP_AUTO_UPDATE
 	if (strcmp(mode_str, "force_update") == 0) {
 		update_info.force_update = !!mode;
 	}
+#endif
+
 	return gt1x_debug_proc(buf, count);
 }
 
@@ -545,11 +549,13 @@ s32 gt1x_send_cfg(u8 * config, int cfg_len)
 	s32 retry = 0;
 	u16 checksum = 0;
 
+#if GTP_AUTO_UPDATE
 	if (update_info.status) {
 		GTP_DEBUG("Ignore cfg during fw update.");
 		return -1;
 	}
-	
+#endif
+
 	mutex_lock(&mutex_cfg);
 	GTP_DEBUG("Driver send config, length:%d", cfg_len);
 	for (i = 0; i < cfg_len - 3; i += 2) {
@@ -1079,10 +1085,13 @@ void gt1x_resume_reset(void)
 {
 	static int rst_flag;
 	s32 i = 0;
-	
-	if (rst_flag || update_info.status) {
+
+	if (rst_flag)
 		return;
-	}
+#if GTP_AUTO_UPDATE
+	if (update_info.status)
+		return;
+#endif
 	GTP_INFO("force_reset_guitar");
 	rst_flag = 1;
 	gt1x_power_switch(SWITCH_ON);
@@ -1107,9 +1116,12 @@ void gt1x_power_reset(void)
 	static int rst_flag;
 	s32 i = 0;
 	
-	if (rst_flag || update_info.status) {
+	if (rst_flag)
 		return;
-	}
+#if GTP_AUTO_UPDATE
+	if (update_info.status)
+		return;
+#endif
 	GTP_INFO("force_reset_guitar");
 	rst_flag = 1;
 	gt1x_irq_disable();
@@ -2236,9 +2248,11 @@ int gt1x_suspend(void)
 #endif
 	if(is_suspend)
 	return 0;
+#if GTP_AUTO_UPDATE
 	if (update_info.status) {
 		return 0;
 	}
+#endif
 #if GTP_SMART_COVER
 	if (gt1x_sc_dev) {
 		gt1x_sc_dev->suspended = 1;
@@ -2317,11 +2331,12 @@ int gt1x_resume(void)
 
 	if(!is_suspend)
 	return 0;
-
+#if GTP_AUTO_UPDATE
 	if (update_info.status) {
 		return 0;
 	}
-	
+#endif
+
 #if GTP_SMART_COVER
 	if (gt1x_sc_dev) {
 		gt1x_sc_dev->suspended = 0;
