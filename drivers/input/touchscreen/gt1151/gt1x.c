@@ -248,11 +248,13 @@ static void gt1x_ts_work_func(struct work_struct *work)
 	s32 ret = 0;
 	u8 point_data[11] = { 0 };
 
+#if GTP_AUTO_UPDATE
 	if (update_info.status) {
 		GTP_DEBUG("Ignore interrupts during fw update.");
 		return;
 	}
-	
+#endif
+
 #if GTP_GESTURE_WAKEUP
 	ret = gesture_event_handler(input_dev);
 	if (ret >= 0) {
