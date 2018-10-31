@@ -75,9 +75,9 @@
 #define HOTKNOT_TYPE          0	// 0: hotknot in flash; 1: hotknot in driver
 #define HOTKNOT_BLOCK_RW      0 //
 
-#define GTP_AUTO_UPDATE       1	// auto update FW to TP FLASH while initializing
-#define GTP_HEADER_FW_UPDATE  1	// firmware in gt1x_firmware.h
-#define GTP_FW_UPDATE_VERIFY  1 // verify fw when updating
+#define GTP_AUTO_UPDATE       0	// auto update FW to TP FLASH while initializing
+#define GTP_HEADER_FW_UPDATE  0	// firmware in gt1x_firmware.h
+#define GTP_FW_UPDATE_VERIFY  0 // verify fw when updating
 
 #define GTP_HAVE_TOUCH_KEY    0 // touch key support
 #define GTP_WITH_STYLUS       0 // pen support

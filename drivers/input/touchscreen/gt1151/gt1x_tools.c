@@ -315,6 +315,7 @@ static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size
 		}
 
 		return CMD_HEAD_LENGTH;
+#if GTP_AUTO_UPDATE
 	} else if (11 == cmd_head.wr) {
 		gt1x_enter_update_mode();
 	} else if (13 == cmd_head.wr) {
@@ -328,6 +329,7 @@ static ssize_t gt1x_tool_write(struct file *filp, const char __user * buff, size
 		if (IS_ERR(thrd)) {
 			return PTR_ERR(thrd);
 		}
+#endif
 	}
 	return CMD_HEAD_LENGTH;
 }
@@ -412,6 +414,7 @@ static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t co
 	} else if (2 == cmd_head.wr) {
 		GTP_DEBUG("Return ic type:%s len:%d.", buffer, (s32) cmd_head.data_len);
 		return -1;
+#if GTP_AUTO_UPDATE
 	} else if (4 == cmd_head.wr) {
 		/* read fw update progress */
 		buffer[0] = update_info.progress >> 8;
@@ -420,6 +423,7 @@ static ssize_t gt1x_tool_read(struct file *filp, char __user * buffer, size_t co
 		buffer[3] = update_info.max_progress & 0xff;
 		*ppos += 4;
 		return 4;
+#endif
 	} else if (6 == cmd_head.wr) {
 		//Read error code!
 		return -1;
