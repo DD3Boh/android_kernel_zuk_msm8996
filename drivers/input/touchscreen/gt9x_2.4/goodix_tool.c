@@ -25,7 +25,9 @@
 #define CMD_HEAD_LENGTH     (sizeof(st_cmd_head) - sizeof(u8*))
 static char procname[20] = {0};
 
+#ifdef CONFIG_GT9X_V24_TOUCHPANEL_UPDATE
 #define UPDATE_FUNCTIONS
+#endif
 
 #ifdef UPDATE_FUNCTIONS
 extern s32 gup_enter_update_mode(struct i2c_client *client);
@@ -595,6 +597,7 @@ ssize_t goodix_tool_read(struct file *file, char __user *page, size_t size, loff
 		ret = simple_read_from_buffer(page, size, ppos, IC_TYPE, sizeof(IC_TYPE));
 		return ret;
 	}
+#ifdef UPDATE_FUNCTIONS
 	else if (4 == cmd_head.wr)
 	{
 		u8 progress_buf[4];
@@ -606,6 +609,7 @@ ssize_t goodix_tool_read(struct file *file, char __user *page, size_t size, loff
 		ret = simple_read_from_buffer(page, size, ppos, progress_buf, 4);
 		return ret;
 	}
+#endif
 	else if (6 == cmd_head.wr)
 	{
 		//Read error code!
