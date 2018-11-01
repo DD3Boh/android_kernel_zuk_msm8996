@@ -13,9 +13,9 @@
 		status = "ok";
 		memory-region = <&ramoops_mem>;
 
-		console-size = <0x80000>;
-		pmsg-size    = <0x20000>;
-		record-size  = <0x10000>;
-		ftrace-size  = <0x10000>;
+		console-size = <0x0 0x00080000>;
+		pmsg-size    = <0x0 0x00040000>;
+		record-size  = <0x0 0x00008000>;
+		ftrace-size  = <0x0 0x00020000>;
 	};
 };
