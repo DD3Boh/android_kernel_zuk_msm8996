@@ -128,6 +128,26 @@
 		/delete-property/ pinctrl-0;
 		/delete-property/ pinctrl-1;
 	};
+
+	sound-9335 {
+		qcom,audio-routing =
+			"AIF4 VI", "MCLK",
+			"RX_BIAS", "MCLK",
+			"MADINPUT", "MCLK",
+			"AMIC1", "MIC BIAS1",
+			"MIC BIAS1", "Handset Mic",
+			"AMIC2", "MIC BIAS2",
+			"MIC BIAS2", "Headset Mic",
+			"AMIC3", "MIC BIAS3",
+			"MIC BIAS3", "Handset Mic",
+			"Lineout_1 amp", "LINEOUT1";
+	};
+};
+
+&slim_msm {
+	tasha_codec {
+		status = "disabled";
+	};
 };
 
 &tlmm {
