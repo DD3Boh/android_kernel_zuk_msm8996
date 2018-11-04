@@ -358,7 +358,6 @@ static int msm_quat_mi2s_ch = 2;
 #endif
 
 static bool codec_reg_done;
-u64 wsa_dev_id;
 
 static const char *const hifi_function[] = {"Off", "On"};
 static const char *const pin_states[] = {"Disable", "active"};
@@ -8958,14 +8957,9 @@ static int msm8996_asoc_machine_probe(struct platform_device *pdev)
 	}
 
 	ret = msm8996_init_wsa_dev(pdev, card);
-#if defined CONFIG_MACH_ZUK_Z2_PLUS
-	if (ret){
-		if(wsa_dev_id == 0x21170214)
-			printk("msm8996_init_wsa_dev wsa_dev_id:%llx\n", wsa_dev_id);
-		else{
-			goto err;
-		}
-	}
+#ifdef CONFIG_SND_SOC_WSA881X
+	if (ret)
+		goto err;
 #endif
 
 	pdata->hph_en1_gpio = of_get_named_gpio(pdev->dev.of_node,
