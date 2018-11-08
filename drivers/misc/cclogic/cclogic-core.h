@@ -145,6 +145,8 @@ struct cclogic_chip {
 	int (*chip_check)(struct i2c_client *client);
 	int (*chip_trymode)(struct i2c_client *client, int mode);
 	struct list_head  chip_list;
+	int (*read)(struct i2c_client *client, u8 reg);
+	int (*write)(struct i2c_client *client, u8 reg, u8 data);
 };
 
 enum cclogic_func_type {
