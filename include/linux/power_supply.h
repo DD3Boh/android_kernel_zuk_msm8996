@@ -472,7 +472,7 @@ devm_power_supply_get_by_phandle(struct device *dev, const char *property)
 extern void power_supply_changed(struct power_supply *psy);
 extern int power_supply_am_i_supplied(struct power_supply *psy);
 extern int power_supply_set_battery_charged(struct power_supply *psy);
-
+extern int get_usb_id_state(void);
 #ifdef CONFIG_POWER_SUPPLY
 extern int power_supply_is_system_supplied(void);
 #else

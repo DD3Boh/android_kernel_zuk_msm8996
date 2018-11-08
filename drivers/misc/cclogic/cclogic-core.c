@@ -23,6 +23,8 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm_runtime.h>
 #include <linux/cclogic-core.h>
+#include <linux/notifier.h>
+#include <linux/export.h>
 
 #include "cclogic-core.h"
 #include "cclogic-class.h"
@@ -34,6 +36,39 @@ static struct mutex cclogic_ops_lock;
 static int m_plug_state = 0;
 
 #define DRIVER_NAME "cclogic"
+
+static BLOCKING_NOTIFIER_HEAD(cclogic_notifier_list);
+
+/**
+ *	cclogic_register_client - register a client notifier
+ *	@nb: notifier block to callback on events
+ */
+int cclogic_register_client(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_register(&cclogic_notifier_list, nb);
+}
+EXPORT_SYMBOL(cclogic_register_client);
+
+/**
+ *	cclogic_unregister_client - unregister a client notifier
+ *	@nb: notifier block to callback on events
+ */
+int cclogic_unregister_client(struct notifier_block *nb)
+{
+	return blocking_notifier_chain_unregister(&cclogic_notifier_list, nb);
+}
+EXPORT_SYMBOL(cclogic_unregister_client);
+
+/**
+ * cclogic_notifier_call_chain - notify clients of fb_events
+ *
+ */
+int cclogic_notifier_call_chain(unsigned long val, void *v)
+{
+	return blocking_notifier_call_chain(&cclogic_notifier_list, val, v);
+}
+EXPORT_SYMBOL_GPL(cclogic_notifier_call_chain);
+
 /*
  *
  */
@@ -593,6 +628,62 @@ static DEVICE_ATTR(cc,S_IRUGO, cclogic_show_cc, NULL);
 /*
  *
  */
+static ssize_t cclogic_reg_show(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct cclogic_dev *cclogic_dev = dev_get_drvdata(dev);
+	int size;
+	int reg, value;
+
+	if(cclogic_dev->ops && cclogic_dev->ops->read){
+		reg = 0x08;
+		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
+		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
+		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+		reg = 0x09;
+		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
+		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
+		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+		reg = 0x0A;
+		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
+		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
+		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+		reg = 0x45;
+		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
+		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
+		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+		reg = 0xA0;
+		value = cclogic_dev->ops->read(cclogic_dev->i2c_client,reg);
+		size+=sprintf(&buf[size],"[0x%02x] register = 0x%02x\n",reg,value);
+		pr_debug("[0x%x] = [0x%x]\n", reg, value);
+	}
+
+	return size;
+}
+
+ static ssize_t cclogic_reg_store(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct cclogic_dev *cclogic_dev = dev_get_drvdata(dev);
+//	int ret;
+	int reg, value;
+	char rw[10];
+
+	pr_debug("[%s][%d]\n", __func__, __LINE__);
+	gpio_set_value_cansleep(cclogic_dev->platform_data->enb_gpio,1);
+
+	sscanf(buf,"%s %x %x",rw,&reg, &value);
+	if(!strcmp(rw,"write")){
+		if(cclogic_dev->ops && cclogic_dev->ops->read){
+			cclogic_dev->ops->write(cclogic_dev->i2c_client, reg, value);
+		}
+	}
+	return size;
+}
+
+static DEVICE_ATTR(reg, S_IRUGO | S_IWUSR, cclogic_reg_show, cclogic_reg_store);
+
+
 static void cclogic_func_set(struct cclogic_platform *p,enum cclogic_func_type func)
 {
 	switch(func){
@@ -741,11 +832,13 @@ static int cclogic_do_real_work(struct cclogic_state *state,
 {
 	int ret=0;
 	struct cclogic_platform *p = pdata->platform_data;
+	static int cclogic_last_status = 0;
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 	cc_otg_state = 0;
 	switch(state->evt){
 	case CCLOGIC_EVENT_DETACHED:
+		cclogic_notifier_call_chain(CCLOGIC_EVENT_DETACHED, NULL);
 		pr_debug("%s-->cable detached\n",__func__);
 		cclogic_vbus_power_on(pdata,false);
 		cclogic_func_set(p,CCLOGIC_FUNC_UART);
@@ -755,6 +848,7 @@ static int cclogic_do_real_work(struct cclogic_state *state,
 		pr_debug("%s-->No event\n",__func__);
 		break;
 	case CCLOGIC_EVENT_ATTACHED:
+		cclogic_notifier_call_chain(CCLOGIC_EVENT_ATTACHED, NULL);
 		pr_debug("%s-->cable attached\n",__func__);
 		break;
 	}
@@ -851,6 +945,15 @@ out:
 		cclogic_class_update_state(&pdata->cdev);
 	}
 
+//	if(unlikely(!gpio_get_value(pdata->platform_data->irq_plug) &&
+	if(unlikely(state->evt == CCLOGIC_EVENT_DETACHED &&
+		cclogic_last_status == CCLOGIC_EVENT_DETACHED)) {
+		msleep(20);
+		pr_debug("cclogic: reset driver ic, try again\n");
+		ret = pdata->ops->chip_reset(pdata->i2c_client);
+	}
+	cclogic_last_status = state->evt;
+
 	return ret;
 }
 
@@ -898,7 +1001,6 @@ work_end:
 		}else
 			pr_err("[%s][%d] still in error,more than %d retries\n", __func__, __LINE__,CCLOGIC_MAX_RETRIES);
 	}
-
 
 	if(wake_lock_active(&pdata->wakelock)){
 		wake_unlock(&pdata->wakelock);
@@ -1298,6 +1400,7 @@ static struct attribute *cclogic_attrs[] = {
 	&dev_attr_chip_power.attr,
 	&dev_attr_status.attr,
 	&dev_attr_enable.attr,
+	&dev_attr_reg.attr,
 #endif
 	&dev_attr_cc.attr,
 	NULL,
