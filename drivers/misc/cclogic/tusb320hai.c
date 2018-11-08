@@ -443,6 +443,8 @@ static struct cclogic_chip tusb320hai_chip = {
 	.chip_trymode           = tusb320hai_trymode,
 	.typec_version          = 11,//spec 1.1
 	.support		= CCLOGIC_SUPPORT_MODE_DUAL,
+	.read		= tusb320hai_read_i2c,
+	.write		= tusb320hai_write_i2c,
 };
 
 /**
