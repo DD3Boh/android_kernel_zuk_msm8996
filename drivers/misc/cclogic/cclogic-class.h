@@ -1,10 +1,10 @@
 #ifndef __CCLOGIC_CLASS_H__
 #define __CCLOGIC_CLASS_H__
 
-struct cclogic_class_dev{
-        const char      *name;
-        struct device   *dev;
-        int             index;
+struct cclogic_class_dev {
+	const char      *name;
+	struct device   *dev;
+	int             index;
 	unsigned int    support;
 	struct device_attribute device_supported_modes_attr;
 	struct device_attribute device_mode_attr;
