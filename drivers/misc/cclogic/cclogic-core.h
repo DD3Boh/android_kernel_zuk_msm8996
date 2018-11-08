@@ -1,32 +1,32 @@
 #ifndef __CCLOGIC_COMMON_H
-#define __CCLOGIC_COMMON_H 
+#define __CCLOGIC_COMMON_H
 
 #include <linux/wakelock.h>
 #include "cclogic-class.h"
 
 #define DEBUG
 
-#define DEV_STAGE_DEBUG 
+#define DEV_STAGE_DEBUG
 #define CCLOGIC_UPDATE_REAL_STATUS
 
 #ifdef DEBUG
 #undef	pr_debug
 #undef  pr_info
-#define pr_debug(fmt, args...) pr_err(fmt, ##args) 
-#define pr_info(fmt, args...) pr_err(fmt, ##args) 
+#define pr_debug(fmt, args...) pr_err(fmt, ##args)
+#define pr_info(fmt, args...) pr_err(fmt, ##args)
 #endif
 
 
 #define CCLOGIC_I2C_VTG_MIN_UV		1800000
 #define CCLOGIC_I2C_VTG_MAX_UV		1800000
-#define CCLOGIC_I2C_LOAD_UA      	1800
+#define CCLOGIC_I2C_LOAD_UA	1800
 
 #define CCLOGIC_MAX_SUPPORT_CHIP    2
-//#define CCLOGIC_MAX_RETRIES         100
+/* #define CCLOGIC_MAX_RETRIES         100 */
 #define CCLOGIC_MAX_RETRIES         5
 
 struct cclogic_of_chip {
-	const char * chip_name;
+	const char *chip_name;
 	int  enb;
 	int  address;
 };
@@ -57,7 +57,7 @@ struct cclogic_platform {
 	unsigned int irq_working;
 	unsigned int irq_plug_flags;
 	unsigned int irq_plug;
-	bool 	     i2c_pull_up;
+	bool	     i2c_pull_up;
 	unsigned int function_switch_gpio1;
 	unsigned int function_switch_gpio10;
 	unsigned int function_switch_gpio2;
@@ -96,7 +96,7 @@ enum cclogic_event_type {
 enum cclogic_cc_type {
 	CCLOGIC_CC_UNKNOWN,
 	CCLOGIC_CC1,
-	CCLOGIC_CC2,	
+	CCLOGIC_CC2,
 	CCLOGIC_CC1_CC2,
 };
 
@@ -115,30 +115,30 @@ struct cclogic_dev	{
 	unsigned int		irq_working;
 	unsigned int		irq_plug;
 	bool			irq_enabled;
-	struct regulator 	*vcc_i2c;
-	bool 			regulator_en;
+	struct regulator	*vcc_i2c;
+	bool			regulator_en;
 	struct delayed_work	work;
 	struct delayed_work	plug_work;
 	struct cclogic_platform *platform_data;
-	struct wake_lock 	wakelock;
-	struct wake_lock 	wakelock_plug;
+	struct wake_lock	wakelock;
+	struct wake_lock	wakelock_plug;
 	bool			vbus_on;
 	struct cclogic_chip *ops;
 	struct cclogic_state state;
 	struct pinctrl *pin;
 	struct pinctrl_state *pin_active;
-	struct pinctrl_state *pin_suspend;	
+	struct pinctrl_state *pin_suspend;
 	struct cclogic_class_dev cdev;
 	int          enb;
 	unsigned int typec_version;
 };
 
 struct cclogic_chip {
-	const char * chip_name;
+	const char *chip_name;
 	unsigned char addr;
 	unsigned int typec_version;
 	unsigned int support;
-	int (*get_state)(struct i2c_client *client,struct cclogic_state *result);
+	int (*get_state)(struct i2c_client *client, struct cclogic_state *result);
 	int (*ack_irq)(struct i2c_client *client);
 	int (*chip_config)(struct i2c_client *client);
 	int (*chip_reset)(struct i2c_client *client);
