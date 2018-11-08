@@ -11,31 +11,34 @@
 struct class *cclogic_class;
 static atomic_t device_count;
 
-
-// USB port's supported modes.  (read-only)
-// Contents: "", "ufp", "dfp", or "ufp dfp".
-static ssize_t cclogic_supported_modes_show(struct device *dev, 
+/*
+ * USB port's supported modes.  (read-only)
+ * Contents: "", "ufp", "dfp", or "ufp dfp".
+*/
+static ssize_t cclogic_supported_modes_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(cdev->support & (CCLOGIC_SUPPORT_MODE_DUAL))
+	if (cdev->support & (CCLOGIC_SUPPORT_MODE_DUAL))
 		return sprintf(buf, "ufp dfp");
 	else if (cdev->support & CCLOGIC_SUPPORT_MODE_UFP)
 		return sprintf(buf, "ufp");
 	else if (cdev->support & CCLOGIC_SUPPORT_MODE_DFP)
 		return sprintf(buf, "dfp");
-	else{
-		*buf='\0';
+	else {
+		*buf = '\0';
 		return 0;
 	}
 }
 
-// USB port's current mode.  (read-write if configurable)
-// Contents: "", "ufp", or "dfp".
-static ssize_t cclogic_mode_show(struct device *dev, 
+/*
+ * USB port's current mode.  (read-write if configurable)
+ * Contents: "", "ufp", or "dfp".
+*/
+static ssize_t cclogic_mode_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -46,19 +49,21 @@ static ssize_t cclogic_mode_show(struct device *dev,
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
 	mode = cclogic_get_connected_mode(pstate);
-	if(mode == CCLOGIC_MODE_UFP)
-		return sprintf(buf,"ufp");
+	if (mode == CCLOGIC_MODE_UFP)
+		return sprintf(buf, "ufp");
 	else if (mode == CCLOGIC_MODE_DFP)
-		return sprintf(buf,"dfp");
-	else{
+		return sprintf(buf, "dfp");
+	else {
 		*buf = '\0';
 		return 0;
 	}
 }
 
-// USB port's current mode.  (read-write if configurable)
-// Contents: "", "ufp", or "dfp".
-static ssize_t cclogic_mode_store(struct device *dev, 
+/*
+ * USB port's current mode.  (read-write if configurable)
+ * Contents: "", "ufp", or "dfp".
+*/
+static ssize_t cclogic_mode_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -66,18 +71,19 @@ static ssize_t cclogic_mode_store(struct device *dev,
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(!strcmp(buf,"ufp")){
+	if (!strcmp(buf, "ufp"))
 		cclogic_set_mode(cclogic_dev, CCLOGIC_MODE_UFP);
-	}else if(!strcmp(buf,"dfp")){
+	else if (!strcmp(buf, "dfp"))
 		cclogic_set_mode(cclogic_dev, CCLOGIC_MODE_DFP);
-	}
 
 	return count;
 }
 
-// USB port's current power role.  (read-write if configurable)
-// Contents: "", "source", or "sink".
-static ssize_t cclogic_power_role_show(struct device *dev, 
+/*
+ * USB port's current power role.  (read-write if configurable)
+ * Contents: "", "source", or "sink".
+*/
+static ssize_t cclogic_power_role_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -86,19 +92,21 @@ static ssize_t cclogic_power_role_show(struct device *dev,
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(cclogic_get_power_role(pstate)==CCLOGIC_POWER_SINK)
-		return sprintf(buf,"sink");
-	else if(cclogic_get_power_role(pstate)==CCLOGIC_POWER_SOURCE)
-		return sprintf(buf,"source");
-	else{
+	if (cclogic_get_power_role(pstate) == CCLOGIC_POWER_SINK)
+		return sprintf(buf, "sink");
+	else if (cclogic_get_power_role(pstate) == CCLOGIC_POWER_SOURCE)
+		return sprintf(buf, "source");
+	else {
 		*buf = '\0';
 		return 0;
 	}
 }
 
-// USB port's current power role.  (read-write if configurable)
-// Contents: "", "source", or "sink".
-static ssize_t cclogic_power_role_store(struct device *dev, 
+/*
+ * USB port's current power role.  (read-write if configurable)
+ * Contents: "", "source", or "sink".
+*/
+static ssize_t cclogic_power_role_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -106,18 +114,19 @@ static ssize_t cclogic_power_role_store(struct device *dev,
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(!strcmp(buf,"sink")){
+	if (!strcmp(buf, "sink"))
 		cclogic_set_power_role(cclogic_dev, CCLOGIC_POWER_SINK);
-	}else if(!strcmp(buf,"source")){
+	else if (!strcmp(buf, "source"))
 		cclogic_set_power_role(cclogic_dev, CCLOGIC_POWER_SOURCE);
-	}
 
 	return count;
 }
 
-// USB port's current data role.  (read-write if configurable)
-// Contents: "", "host", or "device".
-static ssize_t cclogic_data_role_show(struct device *dev, 
+/*
+ * USB port's current data role.  (read-write if configurable)
+ * Contents: "", "host", or "device".
+*/
+static ssize_t cclogic_data_role_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -126,19 +135,21 @@ static ssize_t cclogic_data_role_show(struct device *dev,
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(cclogic_get_data_role(pstate)==CCLOGIC_DATA_HOST)
-		return sprintf(buf,"host");
-	else if(cclogic_get_data_role(pstate)==CCLOGIC_DATA_DEVICE)
-		return sprintf(buf,"device");
-	else{
+	if (cclogic_get_data_role(pstate) == CCLOGIC_DATA_HOST)
+		return sprintf(buf, "host");
+	else if (cclogic_get_data_role(pstate) == CCLOGIC_DATA_DEVICE)
+		return sprintf(buf, "device");
+	else {
 		*buf = '\0';
 		return 0;
 	}
 }
 
-// USB port's current data role.  (read-write if configurable)
-// Contents: "", "host", or "device".
-static ssize_t cclogic_data_role_store(struct device *dev, 
+/*
+ * USB port's current data role.  (read-write if configurable)
+ * Contents: "", "host", or "device".
+*/
+static ssize_t cclogic_data_role_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct cclogic_class_dev *cdev = (struct cclogic_class_dev *) dev_get_drvdata(dev);
@@ -146,16 +157,13 @@ static ssize_t cclogic_data_role_store(struct device *dev,
 
 	pr_debug("[%s][%d]\n", __func__, __LINE__);
 
-	if(!strcmp(buf,"host")){
+	if (!strcmp(buf, "host"))
 		cclogic_set_data_role(cclogic_dev, CCLOGIC_DATA_HOST);
-	}else if(!strcmp(buf,"device")){
+	else if (!strcmp(buf, "device"))
 		cclogic_set_data_role(cclogic_dev, CCLOGIC_DATA_DEVICE);
-	}
 
 	return count;
 }
-
-
 
 void cclogic_class_update_state(struct cclogic_class_dev *cdev)
 {
@@ -204,11 +212,11 @@ int cclogic_class_register(struct cclogic_class_dev *cdev)
 	cdev->device_mode_attr.attr.name = "mode";
 	cdev->device_mode_attr.attr.mode = S_IRUGO;
 	cdev->device_mode_attr.show = cclogic_mode_show;
-	if((cdev->support & CCLOGIC_SUPPORT_MODE_DUAL) == CCLOGIC_SUPPORT_MODE_DUAL){
+	if ((cdev->support & CCLOGIC_SUPPORT_MODE_DUAL) == CCLOGIC_SUPPORT_MODE_DUAL) {
 		cdev->device_mode_attr.attr.mode |= S_IWUSR;
 		cdev->device_mode_attr.store = cclogic_mode_store;
 	}
-        sysfs_attr_init(&cdev->device_mode_attr.attr);
+	sysfs_attr_init(&cdev->device_mode_attr.attr);
 	ret = device_create_file(cdev->dev, &cdev->device_mode_attr);
 	if (ret < 0)
 		goto err_create_file_2;
@@ -216,11 +224,11 @@ int cclogic_class_register(struct cclogic_class_dev *cdev)
 	cdev->device_power_role_attr.attr.name = "power_role";
 	cdev->device_power_role_attr.attr.mode = S_IRUGO;
 	cdev->device_power_role_attr.show = cclogic_power_role_show;
-	if((cdev->support & CCLOGIC_SUPPORT_POWER_SWAP) == CCLOGIC_SUPPORT_POWER_SWAP){
+	if ((cdev->support & CCLOGIC_SUPPORT_POWER_SWAP) == CCLOGIC_SUPPORT_POWER_SWAP) {
 		cdev->device_power_role_attr.attr.mode |= S_IWUSR;
 		cdev->device_power_role_attr.store = cclogic_power_role_store;
 	}
-        sysfs_attr_init(&cdev->device_power_role_attr.attr);
+	sysfs_attr_init(&cdev->device_power_role_attr.attr);
 	ret = device_create_file(cdev->dev, &cdev->device_power_role_attr);
 	if (ret < 0)
 		goto err_create_file_3;
@@ -228,11 +236,11 @@ int cclogic_class_register(struct cclogic_class_dev *cdev)
 	cdev->device_data_role_attr.attr.name = "data_role";
 	cdev->device_data_role_attr.attr.mode = S_IRUGO;
 	cdev->device_data_role_attr.show = cclogic_data_role_show;
-	if((cdev->support & CCLOGIC_SUPPORT_DATA_SWAP) == CCLOGIC_SUPPORT_DATA_SWAP){
+	if ((cdev->support & CCLOGIC_SUPPORT_DATA_SWAP) == CCLOGIC_SUPPORT_DATA_SWAP) {
 		cdev->device_data_role_attr.attr.mode |= S_IWUSR;
 		cdev->device_data_role_attr.store = cclogic_data_role_store;
 	}
-        sysfs_attr_init(&cdev->device_data_role_attr.attr);
+	sysfs_attr_init(&cdev->device_data_role_attr.attr);
 	ret = device_create_file(cdev->dev, &cdev->device_data_role_attr);
 	if (ret < 0)
 		goto err_create_file_4;
