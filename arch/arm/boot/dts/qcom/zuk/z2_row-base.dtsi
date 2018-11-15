@@ -209,6 +209,10 @@
 	qcom,qpnp-lab-init-lcd-voltage = <5500000>;
 };
 
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <2400>;
+};
+
 &pmi8994_haptics {
 	qcom,vmax-mv = <1695>;
 	qcom,wave-shape = "sine";
