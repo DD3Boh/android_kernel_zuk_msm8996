@@ -111,6 +111,10 @@
 	qcom,qpnp-lab-init-lcd-voltage = <5000000>;
 };
 
+&pmi8994_charger {
+	qcom,fastchg-current-ma = <2000>;
+};
+
 &pmi8994_haptics {
 	qcom,actuator-type = "erm";
 	qcom,vmax-mv = <3200>;
