@@ -5723,7 +5723,10 @@ int msm_q6_enable_mi2s_clocks(bool enable)
 				return rc;
 			}
 			dai_data->port_config.i2s.channel_mode = AFE_PORT_I2S_SD1;
-			dai_data->port_config.i2s.mono_stereo = MSM_AFE_CH_STEREO;
+			if (dai_data->channels == 2)
+				dai_data->port_config.i2s.mono_stereo = MSM_AFE_CH_STEREO;
+			else
+				dai_data->port_config.i2s.mono_stereo = MSM_AFE_MONO;
 			dai_data->port_config.i2s.bit_width = 16;
 			dai_data->port_config.i2s.i2s_cfg_minor_version =
 				AFE_API_VERSION_I2S_CONFIG;
