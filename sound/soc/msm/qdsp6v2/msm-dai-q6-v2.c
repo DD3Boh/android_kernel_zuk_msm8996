@@ -5699,8 +5699,7 @@ static const struct snd_soc_component_driver msm_dai_q6_component = {
 
 int msm_q6_enable_mi2s_clocks(bool enable)
 {
-	struct msm_dai_q6_dai_data *dai_data = &mi2s_quat_dai_data->rx_dai.mi2s_dai_data ;
-	union afe_port_config port_config;
+	struct msm_dai_q6_dai_data *dai_data = &mi2s_quat_dai_data->rx_dai.mi2s_dai_data;
 	u16 port_id = 0;
 	int rc = 0;
 
@@ -5723,14 +5722,15 @@ int msm_q6_enable_mi2s_clocks(bool enable)
 				pr_err("%s: afe_set_lpass_clock failed\n", __func__);
 				return rc;
 			}
-			port_config.i2s.channel_mode = AFE_PORT_I2S_SD1;
-			port_config.i2s.mono_stereo = MSM_AFE_CH_STEREO;
-			port_config.i2s.bit_width = 16;
-			port_config.i2s.i2s_cfg_minor_version = AFE_API_VERSION_I2S_CONFIG;
-			port_config.i2s.sample_rate = 48000;
-			port_config.i2s.ws_src = 1;
+			dai_data->port_config.i2s.channel_mode = AFE_PORT_I2S_SD1;
+			dai_data->port_config.i2s.mono_stereo = MSM_AFE_CH_STEREO;
+			dai_data->port_config.i2s.bit_width = 16;
+			dai_data->port_config.i2s.i2s_cfg_minor_version =
+				AFE_API_VERSION_I2S_CONFIG;
+			dai_data->port_config.i2s.sample_rate = 48000;
+			dai_data->port_config.i2s.ws_src = 1;
 			pr_debug("[%s][%d]afe_port_start[%d]\n", __func__, __LINE__,port_id);
-			rc = afe_port_start(port_id, &port_config, 48000);
+			rc = afe_port_start(port_id, &dai_data->port_config, dai_data->rate);
 			if (IS_ERR_VALUE(rc)){
 				printk(KERN_ERR"fail to open AFE port\n");
 				return -EINVAL;
