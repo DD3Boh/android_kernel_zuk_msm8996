@@ -1034,9 +1034,15 @@ static int v4l_querycap(const struct v4l2_ioctl_ops *ops,
 	 * Drivers MUST fill in device_caps, so check for this and
 	 * warn if it was forgotten.
 	 */
+#ifndef CONFIG_MACH_ZUK
 	WARN(!(cap->capabilities & V4L2_CAP_DEVICE_CAPS) ||
 		!cap->device_caps, "Bad caps for driver %s, %x %x",
 		cap->driver, cap->capabilities, cap->device_caps);
+#else
+	if (!(cap->capabilities & V4L2_CAP_DEVICE_CAPS) || !cap->device_caps)
+		pr_warn("Bad caps for driver %s, %x %x",
+		cap->driver, cap->capabilities, cap->device_caps);
+#endif
 	cap->device_caps |= V4L2_CAP_EXT_PIX_FORMAT;
 
 	return ret;
