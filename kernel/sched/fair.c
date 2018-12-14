@@ -7939,6 +7939,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 	int new_cpu = prev_cpu;
 	int want_affine = 0;
 	int sync = wake_flags & WF_SYNC;
+	int _wake_cap = wake_cap(p, cpu, prev_cpu);
 
 #ifdef CONFIG_SCHED_HMP
 	return select_best_cpu(p, prev_cpu, 0, sync);
@@ -7951,7 +7952,6 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 		 * utilization to be synced, and we need that for energy
 		 * aware wakeups
 		 */
-		int _wake_cap = wake_cap(p, cpu, prev_cpu);
 		want_affine = !wake_wide(p, sibling_count_hint) && !_wake_cap
 			      && cpumask_test_cpu(cpu, tsk_cpus_allowed(p));
 	}
