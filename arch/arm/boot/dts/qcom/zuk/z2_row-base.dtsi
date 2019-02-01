@@ -215,3 +215,11 @@
 	qcom,wave-play-rate-us = <4166>;
 	qcom,ilim-ma = <85>;	
 };
+
+&android_vendor {
+	dev = "/dev/block/platform/soc/624000.ufshc/by-name/factory";
+};
+
+&android_system {
+	dev = "/dev/block/platform/soc/624000.ufshc/by-name/system";
+};
