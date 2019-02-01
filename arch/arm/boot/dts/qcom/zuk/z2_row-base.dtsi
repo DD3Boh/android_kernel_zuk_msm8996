@@ -244,7 +244,7 @@
 	android {
 		fstab {
 			vendor {
-				dev = "/dev/block/platform/soc/624000.ufshc/by-name/vendor";
+				dev = "/dev/block/platform/soc/624000.ufshc/by-name/factory";
 			};
 			system {
 				dev = "/dev/block/platform/soc/624000.ufshc/by-name/system";
