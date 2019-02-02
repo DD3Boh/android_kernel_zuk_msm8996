@@ -366,13 +366,6 @@
 			vendor {
 				fsmgr_flags = "wait";
 			};
-			system {
-				compatible = "android,system";
-				type = "ext4";
-				mnt_flags = "ro,barrier=1,discard";
-				fsmgr_flags = "wait";
-				status = "ok";
-			};
 		};
 	};
 };
