@@ -127,7 +127,3 @@
 &android_vendor {
 	dev = "/dev/block/platform/soc/7464900.sdhci/by-name/factory";
 };
-
-&android_system {
-	dev = "/dev/block/platform/soc/7464900.sdhci/by-name/system";
-};
