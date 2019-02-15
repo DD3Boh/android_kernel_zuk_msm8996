@@ -354,3 +354,11 @@
 &android_vendor {
 	fsmgr_flags = "wait";
 };
+
+&pm8994_vadc {
+	/delete-node/ chan@75;
+};
+
+&pm8994_adc_tm {
+	/delete-node/ chan@75;
+};
