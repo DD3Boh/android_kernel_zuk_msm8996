@@ -339,6 +339,9 @@
 &firmware {
 	android {
 		fstab {
+			vendor {
+				fsmgr_flags = "wait";
+			};
 			system {
 				compatible = "android,system";
 				dev = "/dev/block/platform/soc/7464900.sdhci/by-name/system";
