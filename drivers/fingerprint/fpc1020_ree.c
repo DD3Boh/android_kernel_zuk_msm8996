@@ -46,6 +46,7 @@ struct fpc1020_data {
 	int irq_gpio;
 	int irq;
 	bool irq_enabled;
+	int wakeup_enabled;
 	struct notifier_block fb_notif;
 	/*Input device*/
 	struct input_dev *input_dev;
@@ -169,8 +170,9 @@ static ssize_t proximity_state_set(struct device *dev,
 		if (fpc1020->proximity_state == 1) {
 			/* Disable IRQ when screen is off and proximity sensor is covered */
 			config_irq(fpc1020, false);
-		} else if (fpc1020->proximity_state == 0) {
-			/* Enable IRQ when screen is off and proximity sensor is uncovered */
+		} else if (fpc1020->wakeup_enabled) {
+			/* Enable IRQ when screen is off and proximity sensor is uncovered,
+			 but only if fingerprint wake up is enabled */
 			 config_irq(fpc1020, true);
 		}
 	}
@@ -254,8 +256,10 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *_fpc1020)
 	struct fpc1020_data *fpc1020 = _fpc1020;
 
 	pr_info("fpc1020 IRQ interrupt\n");
+	/* Make sure 'wakeup_enabled' is updated before using it
+	 ** since this is interrupt context (other thread...) */
 	smp_rmb();
-	if (fpc1020->screen_on == 0) {
+	if (fpc1020->wakeup_enabled && !fpc1020->screen_on) {
 		pm_wakeup_event(fpc1020->dev, 5000);
 	}
 	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
@@ -289,15 +293,26 @@ static int fpc1020_initial_irq(struct fpc1020_data *fpc1020)
 		return -EINVAL;
 	}
 
+	device_init_wakeup(fpc1020->dev, 1);
+	fpc1020->wakeup_enabled = 1;
+
 	retval = devm_request_threaded_irq(fpc1020->dev,
 			fpc1020->irq, NULL, fpc1020_irq_handler,
-			IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_NO_SUSPEND,
 			dev_name(fpc1020->dev), fpc1020);
+
 	if (retval) {
 		pr_err("request irq %i failed.\n", fpc1020->irq);
 		fpc1020->irq = -EINVAL;
 		return -EINVAL;
 	}
+
+	dev_info(fpc1020->dev, "requested irq %d\n", fpc1020->irq);
+	/* Request that the interrupt should be wakeable*/
+	if (fpc1020->wakeup_enabled) {
+		enable_irq_wake(fpc1020->irq);
+	}
+	fpc1020->irq_enabled = true;
 
 	return 0;
 }
@@ -392,6 +407,8 @@ static int fb_notifier_callback(struct notifier_block *self,
 		} else if (*blank == FB_BLANK_POWERDOWN) {
 			pr_err("ScreenOff\n");
 			fpc1020->screen_on = 0;
+			if (!fpc1020->wakeup_enabled)
+				config_irq(fpc1020, false);
 			queue_work(fpc1020->fpc1020_wq, &fpc1020->pm_work);
 		}
 	}
@@ -419,6 +436,8 @@ static int fpc1020_probe(struct platform_device *pdev)
 		pr_err("Get pins failed\n");
 		goto error;
 	}
+
+	fpc1020->wakeup_enabled = 0;
 
 	/*create sfs nodes*/
 	retval = fpc1020_manage_sysfs(fpc1020);
