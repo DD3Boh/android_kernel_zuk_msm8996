@@ -21,12 +21,6 @@ struct smem_nv {
 
 static struct smem_nv *psmem_nv = NULL;
 
-void dump_smem(struct smem_nv *buf)
-{
-	print_hex_dump(KERN_ALERT, "wifi   : ", DUMP_PREFIX_NONE, 16, 1,
-				   buf->nv_wifi, NV_WIFI_ADDR_SIZE, false);
-}
-
 static int smem_read_nv(void)
 {
 	struct smem_nv *buf;
@@ -44,13 +38,12 @@ static int smem_read_nv(void)
 	}
 
 	memcpy(psmem_nv, buf, sizeof(struct smem_nv));
-	dump_smem(psmem_nv);
 
 	return 0;
 }
 
 static long dump_wifi_addr(struct file *filp, char __user *buf,
-						   size_t count, loff_t *f_pos) 
+						   size_t count, loff_t *f_pos)
 {
 	loff_t pos = *f_pos;
 	int ret;
@@ -61,7 +54,7 @@ static long dump_wifi_addr(struct file *filp, char __user *buf,
 		return ret;
 	}
 
-	if (!psmem_nv) 
+	if (!psmem_nv)
 	{
 		printk(KERN_ERR "Could not get smem for wlan mac nv\n");
 		return 0;
