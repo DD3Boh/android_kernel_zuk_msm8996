@@ -355,10 +355,21 @@
 	fsmgr_flags = "wait";
 };
 
+// Disabled thermal sensors, see msm8996-mtp.dtsi for names
 &pm8994_vadc {
 	/delete-node/ chan@75;
+	/delete-node/ chan@77;
+	/delete-node/ chan@74;
+	/delete-node/ chan@7c;
+	/delete-node/ chan@73;
+	/delete-node/ chan@78;
 };
 
 &pm8994_adc_tm {
 	/delete-node/ chan@75;
+	/delete-node/ chan@77;
+	/delete-node/ chan@74;
+	/delete-node/ chan@7c;
+	/delete-node/ chan@73;
+	/delete-node/ chan@78;
 };
