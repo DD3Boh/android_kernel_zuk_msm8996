@@ -651,6 +651,8 @@ struct fg_chip {
 	bool			batt_info_restore;
 	bool			*batt_range_ocv;
 	int			*batt_range_pct;
+	ktime_t 		soc_kt;
+	u8	 		is_op_soc;
 };
 
 /* FG_MEMIF DEBUGFS structures */
@@ -2238,6 +2240,74 @@ static int get_monotonic_soc_raw(struct fg_chip *chip)
 #define MISSING_CAPACITY	100
 #define FULL_CAPACITY		100
 #define FULL_SOC_RAW		0xFF
+
+static int bound_soc(int soc)
+{
+        soc = max(0, soc);
+        soc = min(100, soc);
+         return soc;
+}
+
+#define LENUK_OP_FIR_SOC		60
+#define LENUK_OP_SEC_SOC		85
+#define LENUK_SOC_CHANGE_MS		25000
+static int set_soc_remap_point(struct fg_chip *chip, int soc)
+{
+	int mapped_soc = 0;
+	if (!chip->is_op_soc) {
+		chip->soc_kt = ktime_get_boottime();
+		mapped_soc = soc;
+		chip->is_op_soc = 1;
+	} else {
+		ktime_t now_kt, delta_kt;
+		int delta_ms;
+		now_kt = ktime_get_boottime();
+		delta_kt = ktime_sub(now_kt, chip->soc_kt);
+		delta_ms = (int)div64_s64(ktime_to_ns(delta_kt), 1000000);
+		if (delta_ms <= LENUK_SOC_CHANGE_MS) {
+			if (chip->status == POWER_SUPPLY_STATUS_CHARGING)
+				mapped_soc = soc;
+			else
+				mapped_soc = soc + 1;
+		}else {
+			if (chip->status == POWER_SUPPLY_STATUS_CHARGING)
+				mapped_soc = soc + 1;
+			else
+				mapped_soc = soc;
+		}
+	}
+ 	return mapped_soc;
+}
+
+static int soc_remap_process(struct fg_chip *chip, int soc)
+{
+	int maped_soc = 0;
+	switch(soc){
+	case LENUK_OP_FIR_SOC :
+		maped_soc = set_soc_remap_point(chip,soc);
+		break;
+	case LENUK_OP_SEC_SOC :
+		maped_soc = set_soc_remap_point(chip,soc) + 1;
+                break;
+	default:
+		chip->is_op_soc = 0;
+		if(soc >= 61 && soc <= 84 )
+			maped_soc = soc + 1;
+		else if(soc >= 86 && soc <= 100)
+			maped_soc = bound_soc(soc + 2);
+		else
+			maped_soc = soc;
+	}
+	pr_info("pre_map_soc is %d,post_map_soc is %d\n",soc,maped_soc);
+	return maped_soc;
+}
+static int soc_show_op(struct fg_chip *chip, int msoc)
+{
+	int soc = DIV_ROUND_CLOSEST((msoc - 1) * (FULL_CAPACITY - 2),
+                        FULL_SOC_RAW - 2) + 1;
+	return soc_remap_process(chip, soc);
+}
+
 static int get_prop_capacity(struct fg_chip *chip)
 {
 	int msoc, rc;
@@ -2285,9 +2355,7 @@ static int get_prop_capacity(struct fg_chip *chip)
 	} else if (msoc == FULL_SOC_RAW) {
 		return FULL_CAPACITY;
 	}
-
-	return DIV_ROUND_CLOSEST((msoc - 1) * (FULL_CAPACITY - 2),
-			FULL_SOC_RAW - 2) + 1;
+	return soc_show_op(chip, msoc);
 }
 
 #define HIGH_BIAS	3
