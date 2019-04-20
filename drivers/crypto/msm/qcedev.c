@@ -1608,6 +1608,8 @@ long qcedev_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 	struct qcedev_async_req qcedev_areq;
 	struct qcedev_stat *pstat;
 
+	cmd = (u16)cmd;
+
 	handle =  file->private_data;
 	podev =  handle->cntl;
 	qcedev_areq.handle = handle;

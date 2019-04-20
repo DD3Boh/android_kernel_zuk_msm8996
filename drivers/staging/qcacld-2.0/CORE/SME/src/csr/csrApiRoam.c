@@ -7297,27 +7297,24 @@ eHalStatus csrRoamCopyConnectedProfile(tpAniSirGlobal pMac, tANI_U32 sessionId, 
     do
     {
         vos_mem_set(pDstProfile, sizeof(tCsrRoamProfile), 0);
-        if(pSrcProfile->bssid)
+	pDstProfile->BSSIDs.bssid = vos_mem_malloc(sizeof(tCsrBssid));
+	if ( NULL == pDstProfile->BSSIDs.bssid )
+	    status = eHAL_STATUS_FAILURE;
+        else
+	    status = eHAL_STATUS_SUCCESS;
+        if(!HAL_STATUS_SUCCESS(status))
         {
-            pDstProfile->BSSIDs.bssid = vos_mem_malloc(sizeof(tCsrBssid));
-            if ( NULL == pDstProfile->BSSIDs.bssid )
-                status = eHAL_STATUS_FAILURE;
-            else
-                status = eHAL_STATUS_SUCCESS;
-            if(!HAL_STATUS_SUCCESS(status))
-            {
-                smsLog(pMac, LOGE,
-                    FL("failed to allocate memory for BSSID"
-                    "%02x:%02x:%02x:%02x:%02x:%02x"),
-                    pSrcProfile->bssid[0], pSrcProfile->bssid[1],
-                    pSrcProfile->bssid[2], pSrcProfile->bssid[3],
-                    pSrcProfile->bssid[4], pSrcProfile->bssid[5]);
-                break;
-            }
-            pDstProfile->BSSIDs.numOfBSSIDs = 1;
-            vos_mem_copy(pDstProfile->BSSIDs.bssid, pSrcProfile->bssid,
-                         sizeof(tCsrBssid));
+	    smsLog(pMac, LOGE,
+                FL("failed to allocate memory for BSSID"
+                "%02x:%02x:%02x:%02x:%02x:%02x"),
+                pSrcProfile->bssid[0], pSrcProfile->bssid[1],
+                pSrcProfile->bssid[2], pSrcProfile->bssid[3],
+                pSrcProfile->bssid[4], pSrcProfile->bssid[5]);
+            break;
         }
+        pDstProfile->BSSIDs.numOfBSSIDs = 1;
+        vos_mem_copy(pDstProfile->BSSIDs.bssid, pSrcProfile->bssid,
+                     sizeof(tCsrBssid));
         if(pSrcProfile->SSID.length > 0)
         {
             pDstProfile->SSIDs.SSIDList = vos_mem_malloc(sizeof(tCsrSSIDInfo));
@@ -14919,7 +14916,7 @@ eHalStatus csrSendJoinReqMsg( tpAniSirGlobal pMac, tANI_U32 sessionId, tSirBssDe
         }
         if (pProfile->MFPEnabled &&
            !(pProfile->MFPRequired) && ((pIes->RSN.present) &&
-           (!(pIes->RSN.RSN_Cap[0] >> 7) & 0x1)))
+           (!pIes->RSN.RSN_Cap[0] >> 7 & 0x1)))
             dwTmp = pal_cpu_to_be32(eSIR_ED_NONE);
         vos_mem_copy(pBuf, &dwTmp, sizeof(tANI_U32));
         pBuf += sizeof(tANI_U32);
@@ -18572,7 +18569,7 @@ eHalStatus csrRoamOffloadScan(tpAniSirGlobal pMac, tANI_U8 sessionId,
                        vos_nv_getChannelEnabledState(*ChannelList),
                        *ChannelList,
                        num_channels);
-              ChannelList++;
+            ChannelList++;
         }
         pRequestBuf->ConnectedNetwork.ChannelCount = num_channels;
         /* If the profile changes as to what it was earlier, inform the

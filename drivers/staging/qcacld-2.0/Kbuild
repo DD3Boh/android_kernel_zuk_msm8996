@@ -1041,7 +1041,6 @@ CDEFINES :=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DWLAN_PERF \
 		-DPTT_SOCK_SVC_ENABLE \
 		-Wall\
-		-Werror\
 		-D__linux__ \
 		-DHAL_SELF_STA_PER_BSS=1 \
 		-DWLAN_FEATURE_VOWIFI_11R \
@@ -1802,6 +1801,10 @@ endif
 
 ifeq ($(call cc-option-yn, -Wheader-guard),y)
 EXTRA_CFLAGS += -Wheader-guard
+endif
+
+ifeq ($(cc-name),clang)
+EXTRA_CFLAGS += -Wno-enum-conversion
 endif
 
 # If the module name is not "wlan", then the define MULTI_IF_NAME to be the

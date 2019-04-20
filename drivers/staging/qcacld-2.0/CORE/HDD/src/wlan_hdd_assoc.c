@@ -3126,10 +3126,10 @@ static void hdd_RoamIbssIndicationHandler( hdd_adapter_t *pAdapter,
 
             if (chan_no <= 14)
                 freq = ieee80211_channel_to_frequency(chan_no,
-                                                      IEEE80211_BAND_2GHZ);
+                                                      HDD_NL80211_BAND_2GHZ);
             else
                 freq = ieee80211_channel_to_frequency(chan_no,
-                                                      IEEE80211_BAND_5GHZ);
+                                                      HDD_NL80211_BAND_5GHZ);
 
             chan = ieee80211_get_channel(pAdapter->wdev.wiphy, freq);
 
@@ -5476,7 +5476,7 @@ int hdd_set_csr_auth_type ( hdd_adapter_t  *pAdapter, eCsrAuthType RSNAuthType)
                 hddLog( LOG1, "%s: set authType to CCKM WPA. AKM also 802.1X.", __func__);
                 pRoamProfile->AuthType.authType[0] = eCSR_AUTH_TYPE_CCKM_WPA;
             } else
-            if ((RSNAuthType == eCSR_AUTH_TYPE_CCKM_WPA)) {
+            if (RSNAuthType == eCSR_AUTH_TYPE_CCKM_WPA) {
                 hddLog( LOG1, "%s: Last chance to set authType to CCKM WPA.", __func__);
                 pRoamProfile->AuthType.authType[0] = eCSR_AUTH_TYPE_CCKM_WPA;
             } else
@@ -5500,7 +5500,7 @@ int hdd_set_csr_auth_type ( hdd_adapter_t  *pAdapter, eCsrAuthType RSNAuthType)
                 hddLog( LOG1, "%s: set authType to CCKM RSN. AKM also 802.1X.", __func__);
                 pRoamProfile->AuthType.authType[0] = eCSR_AUTH_TYPE_CCKM_RSN;
             } else
-            if ((RSNAuthType == eCSR_AUTH_TYPE_CCKM_RSN)) {
+            if (RSNAuthType == eCSR_AUTH_TYPE_CCKM_RSN) {
                 hddLog( LOG1, "%s: Last chance to set authType to CCKM RSN.", __func__);
                 pRoamProfile->AuthType.authType[0] = eCSR_AUTH_TYPE_CCKM_RSN;
             } else
