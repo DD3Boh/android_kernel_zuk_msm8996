@@ -13,10 +13,12 @@
 #include <linux/slab.h>
 
 #define NV_WIFI_ADDR_SIZE	6
+#define NV_BT_ADDR_SIZE	6
 #define NV_MAX_SIZE		512
 
 struct smem_nv {
 	unsigned char nv_wifi[NV_WIFI_ADDR_SIZE];
+	unsigned char nv_bt[NV_BT_ADDR_SIZE];
 };
 
 static struct smem_nv *psmem_nv = NULL;
@@ -105,16 +107,63 @@ EXPORT_SYMBOL_GPL(wlan_get_nv_mac);
 		.read = name, \
 };
 
+static long dump_bt_addr(struct file *filp, char __user *buf,
+						   size_t count, loff_t *f_pos)
+{
+	loff_t pos = *f_pos;
+	size_t len;
+
+	if (!psmem_nv)
+		smem_read_nv();
+
+	if (!psmem_nv) {
+		printk(KERN_ERR "Could not get smem for bt mac nv\n");
+		return 0;
+	}
+
+	len = sizeof(psmem_nv->nv_bt);
+
+	if(pos >= len ) {
+			count = 0;
+			goto out;
+	}
+
+	if(count > (len - pos))
+			count = len - pos;
+
+	pos += count;
+
+	if(copy_to_user(buf,psmem_nv->nv_bt + (*f_pos),count)){
+		count = -EFAULT;
+		goto out;
+	}
+
+	*f_pos = pos;
+
+out:
+	return count;
+}
+
 DECLARE_FOPS(dump_wifi_addr)
+DECLARE_FOPS(dump_bt_addr)
 
 static int show_nv(void)
 {
 	struct proc_dir_entry *wifi_addr_entry;
+	struct proc_dir_entry *bt_addr_entry;
 
 	wifi_addr_entry = proc_create("mac_wifi", 0, NULL, &dump_wifi_addr_fops);
+	bt_addr_entry = proc_create("mac_bt", 0, NULL, &dump_bt_addr_fops);
+
 	if (!wifi_addr_entry) {
 		pr_info("%s: failed to create mac_wifi entry", __func__);
 		remove_proc_entry("mac_wifi", NULL);
+		return 1;
+	}
+
+	if (!bt_addr_entry) {
+		pr_info("%s: failed to create mac_bt entry", __func__);
+		remove_proc_entry("mac_bt", NULL);
 		return 1;
 	}
 
