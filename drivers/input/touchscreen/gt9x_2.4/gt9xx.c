@@ -1426,7 +1426,6 @@ static s32 gtp_init_panel(struct goodix_ts_data *ts)
             {
                 ts->fw_error = 1;
                 GTP_ERROR("Firmware error, no config sent!");
-                return -1;
             }
         }
     }
