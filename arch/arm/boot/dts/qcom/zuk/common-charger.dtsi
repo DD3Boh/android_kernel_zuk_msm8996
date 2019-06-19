@@ -7,7 +7,6 @@
 	qcom,warm-fv-comp = <4100>;
 	qcom,cool-cc-comp = <500>;
 	qcom,cool-fv-comp = <4400>;
-	qcom,usbin-vadc = <&pmi8994_vadc>;
 	qcom,bmd-algo-disabled;
 	qcom,float-voltage-comp = <0x10>;
 	qcom,fastchg-current-comp = <1500>;
