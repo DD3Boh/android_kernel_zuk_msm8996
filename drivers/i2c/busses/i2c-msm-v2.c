@@ -3040,11 +3040,7 @@ static int i2c_msm_init(void)
 {
 	return platform_driver_register(&i2c_msm_driver);
 }
-#ifdef CONFIG_MACH_ZUK_Z2_PLUS
-arch_initcall(i2c_msm_init);
-#else
 subsys_initcall(i2c_msm_init);
-#endif
 
 static void i2c_msm_exit(void)
 {
