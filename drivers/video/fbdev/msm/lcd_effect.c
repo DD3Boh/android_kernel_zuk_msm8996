@@ -686,7 +686,6 @@ int handle_lcd_effect_data(
 			pr_info("%s:SET_EFFECT,index=%d,level=%d\n",__func__,ctrl_data->index,ctrl_data->level);
 				ret = lcd_set_effect(mfd, panel_data, ctrl_data->index, ctrl_data->level);
 			} else {
-				mode_index=mode_index;
 				lcd_effect_info("(%s) can't support change effect\n", mode_data->mode[mode_index].name);
 				ret = -EINVAL;
 			}
